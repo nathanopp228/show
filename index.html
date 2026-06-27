@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WatchTogether</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#0D1117;--card:#161D27;--mid:#1E2A3A;--gold:#E8C07D;--goldd:#C9A35A;--cream:#F0E6D3;--dim:#9A8E82;--red:#FF6B6B;--green:#6BF0B0;--blue:#5B8DEF;--border:rgba(232,192,125,0.13)}
+body{background:var(--navy);color:var(--cream);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* LOADING */
+#ls{position:fixed;inset:0;background:var(--navy);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+.l-logo{font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold)}.l-logo span{color:var(--red)}
+#lp{width:220px;height:3px;background:var(--mid);border-radius:2px;overflow:hidden}
+#lf{height:100%;background:var(--gold);border-radius:2px;width:0;transition:width .4s}
+#lm{font-size:.8rem;color:var(--dim)}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:13px 22px;border-bottom:1px solid var(--border);background:rgba(13,17,23,.97);backdrop-filter:blur(12px);position:sticky;top:0;z-index:100}
+.logo{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--gold)}.logo span{color:var(--red)}
+.rpill{font-size:.72rem;color:var(--dim);background:var(--mid);border:1px solid var(--border);padding:4px 11px;border-radius:20px;cursor:pointer;transition:all .2s;display:none}
+.rpill:hover{border-color:var(--gold);color:var(--gold)}
+nav{display:flex;gap:5px}
+.tb{background:none;border:1px solid transparent;color:var(--dim);font-family:'Inter',sans-serif;font-size:.78rem;font-weight:500;padding:6px 14px;border-radius:20px;cursor:pointer;transition:all .2s;display:none}
+.tb:hover{color:var(--cream);border-color:var(--border)}.tb.active{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+
+/* LAYOUT */
+.app{display:flex;min-height:calc(100vh - 55px)}
+.main{flex:1;display:flex;flex-direction:column;align-items:center;padding:28px 16px}
+.side{width:280px;border-left:1px solid var(--border);padding:20px 16px;overflow-y:auto;max-height:calc(100vh - 55px);flex-shrink:0}
+
+/* VIEWS */
+.view{display:none;width:100%;flex-direction:column;align-items:center}.view.active{display:flex}
+
+/* CARDS */
+input[type=text]{flex:1;background:var(--mid);border:1px solid var(--border);border-radius:9px;color:var(--cream);font-family:'Inter',sans-serif;font-size:.86rem;padding:10px 13px;outline:none;transition:border-color .2s;width:100%}
+input[type=text]:focus{border-color:var(--gold)}input[type=text]::placeholder{color:var(--dim)}
+.btn{background:var(--gold);color:var(--navy);border:none;border-radius:10px;font-family:'Inter',sans-serif;font-weight:600;font-size:.88rem;padding:12px 20px;cursor:pointer;transition:all .2s;width:100%}
+.btn:hover{background:var(--goldd)}.btn:active{transform:scale(.98)}
+.btn2{background:transparent;color:var(--dim);border:1px solid var(--border);border-radius:10px;font-family:'Inter',sans-serif;font-weight:500;font-size:.86rem;padding:10px 20px;cursor:pointer;transition:all .2s;width:100%;margin-top:7px}
+.btn2:hover{border-color:var(--gold);color:var(--gold)}
+
+/* SETUP */
+.scard{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;width:100%;max-width:420px;text-align:center}
+.scard h2{font-family:'Playfair Display',serif;font-size:1.6rem;color:var(--gold);margin-bottom:7px}
+.scard p{color:var(--dim);font-size:.85rem;margin-bottom:24px;line-height:1.65}
+.ig{display:flex;flex-direction:column;gap:8px;margin-bottom:13px}
+.ir{display:flex;gap:8px;align-items:center}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.div{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--dim);font-size:.76rem}
+.div::before,.div::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* LOBBY */
+.lcard{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px;width:100%;max-width:420px;text-align:center}
+.rcode{font-family:'Playfair Display',serif;font-size:2.5rem;letter-spacing:.15em;color:var(--gold);margin:14px 0 3px;cursor:pointer}
+.chint{font-size:.74rem;color:var(--dim);cursor:pointer;margin-bottom:18px}
+.lslots{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.pslot{display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--mid);border-radius:10px}
+.pslot .pn{flex:1;font-size:.86rem;font-weight:500}
+.sok{font-size:.71rem;color:var(--green)}.swt{font-size:.71rem;color:var(--dim)}
+.spin{width:26px;height:26px;border:2.5px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* GENRE BAR */
+.gbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:14px;width:100%;max-width:390px}
+.gc{background:var(--mid);border:1px solid var(--border);color:var(--dim);font-size:.72rem;font-weight:500;padding:4px 12px;border-radius:20px;cursor:pointer;transition:all .17s;white-space:nowrap}
+.gc:hover{border-color:var(--gold);color:var(--gold)}.gc.active{background:var(--gold);color:var(--navy);border-color:var(--gold);font-weight:600}
+
+/* SWIPE HEADER */
+.sh{width:100%;max-width:380px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.pb{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:500}
+.ld{display:flex;gap:5px}
+.liv{display:flex;align-items:center;gap:4px;font-size:.7rem;padding:3px 8px;border-radius:20px;border:1px solid;transition:opacity .3s}
+.liv.p1{color:var(--red);border-color:rgba(255,107,107,.3);background:rgba(255,107,107,.07)}
+.liv.p2{color:var(--blue);border-color:rgba(91,141,239,.3);background:rgba(91,141,239,.07)}
+.pip{width:5px;height:5px;border-radius:50%}
+.liv.p1 .pip{background:var(--red)}.liv.p2 .pip{background:var(--blue)}
+.liv.dim{opacity:.3}
+
+/* SESSION PROGRESS */
+.sesprog{width:100%;max-width:380px;margin-bottom:14px}
+.spbar{height:4px;background:var(--mid);border-radius:2px;overflow:hidden;margin-bottom:5px}
+.spfill{height:100%;background:var(--gold);border-radius:2px;transition:width .4s}
+.sptext{font-size:.72rem;color:var(--dim);text-align:center}
+
+/* CARD STACK */
+.cs{width:100%;max-width:350px;position:relative;height:505px}
+.sc{position:absolute;inset:0;border-radius:18px;overflow:hidden;border:1px solid var(--border);background:var(--card);cursor:grab;user-select:none;will-change:transform}
+.sc.b1{transform:scale(.95) translateY(9px);z-index:1}.sc.b2{transform:scale(.90) translateY(18px);z-index:0}.sc.top{z-index:10}
+.sc:active{cursor:grabbing}
+.sc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:14px;background:repeating-linear-gradient(to bottom,var(--navy) 0,var(--navy) 5px,var(--mid) 5px,var(--mid) 11px);z-index:2;border-right:1px solid rgba(255,255,255,.04)}
+.ceb{width:100%;height:220px;display:flex;align-items:center;justify-content:center;font-size:4.5rem;position:relative}
+.cg{position:absolute;left:14px;right:0;top:160px;height:80px;background:linear-gradient(to bottom,transparent,var(--card));pointer-events:none}
+
+/* SCORE BADGE */
+.csb{position:absolute;top:10px;right:10px;z-index:15;border-radius:10px;padding:4px 9px;font-size:.7rem;font-weight:700;display:flex;align-items:center;gap:4px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1)}
+.sh-c{background:rgba(107,240,176,.18);color:var(--green);border-color:rgba(107,240,176,.28)}
+.sm-c{background:rgba(232,192,125,.18);color:var(--gold);border-color:rgba(232,192,125,.28)}
+.sl-c{background:rgba(255,107,107,.13);color:var(--red);border-color:rgba(255,107,107,.22)}
+
+/* STREAMING BADGES */
+.stb{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+.sb{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:4px}
+.sn{background:#E50914;color:#fff}.sh2{background:#1CE783;color:#000}.sd{background:#113CCF;color:#fff}
+.sa{background:#00A8E0;color:#fff}.sm{background:#5822FF;color:#fff}.sap{background:#555;color:#fff}
+.sp{background:#F5A623;color:#000}.spar{background:#0064FF;color:#fff}
+
+.cb{padding:11px 14px 15px 19px}
+.cgl{font-size:.65rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:4px}
+.ct{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--cream);line-height:1.2;margin-bottom:3px}
+.cm{font-size:.72rem;color:var(--dim);margin-bottom:6px}
+.cd{font-size:.77rem;color:var(--dim);line-height:1.56;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ctags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.tag{background:rgba(232,192,125,.08);border:1px solid rgba(232,192,125,.17);color:var(--gold);font-size:.64rem;padding:2px 7px;border-radius:20px}
+.sy,.sn2{position:absolute;top:15px;font-size:1.3rem;font-weight:800;border:3px solid;padding:4px 11px;border-radius:7px;opacity:0;z-index:20;pointer-events:none}
+.sy{left:18px;color:var(--green);border-color:var(--green);transform:rotate(-15deg)}
+.sn2{right:18px;color:var(--red);border-color:var(--red);transform:rotate(15deg)}
+
+/* ACTIONS */
+.ca{display:flex;justify-content:center;gap:16px;margin-top:20px}
+.ab{width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s}
+.ab:hover{transform:scale(1.1)}.ab:active{transform:scale(.93)}
+.anp{background:rgba(255,107,107,.1);border:2px solid rgba(255,107,107,.32);color:var(--red)}
+.aht{background:rgba(255,107,107,.82);border:2px solid var(--red);color:#fff;box-shadow:0 4px 14px rgba(255,107,107,.3)}
+.ask{background:rgba(91,141,239,.1);border:2px solid rgba(91,141,239,.28);color:var(--blue);font-size:.9rem}
+.pt{font-size:.74rem;color:var(--dim);text-align:center;margin-top:8px}
+
+/* WAITING */
+.wo{position:absolute;inset:0;background:rgba(13,17,23,.75);backdrop-filter:blur(5px);border-radius:18px;display:none;align-items:center;justify-content:center;flex-direction:column;gap:11px;z-index:30}
+.wo p{color:var(--dim);font-size:.83rem;text-align:center;padding:0 18px}
+
+/* END OF ROUND SCREEN */
+.eor{width:100%;max-width:640px;display:flex;flex-direction:column;gap:20px}
+.eor-title{font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--gold);text-align:center;margin-bottom:4px}
+.eor-sub{font-size:.82rem;color:var(--dim);text-align:center;margin-bottom:6px}
+.eor-sec{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
+.eor-sec-title{font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.eor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:9px}
+.eor-card{background:var(--mid);border-radius:10px;padding:10px;font-size:.78rem}
+.eor-emoji{font-size:1.4rem;margin-bottom:4px}
+.eor-name{color:var(--cream);font-weight:500;font-size:.78rem;line-height:1.3}
+.eor-genre{color:var(--dim);font-size:.68rem;margin-top:2px}
+.eor-empty{color:var(--dim);font-size:.8rem;text-align:center;padding:12px 0}
+.eor-btns{display:flex;gap:10px;justify-content:center;margin-top:8px}
+
+/* MATCHES VIEW */
+.mv-title{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--gold);margin-bottom:4px}
+.mv-sub{font-size:.8rem;color:var(--dim);margin-bottom:20px}
+.mg{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:11px;width:100%;max-width:640px}
+.mc{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.me{height:80px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;background:var(--mid)}
+.mi{padding:10px}.mt2{font-family:'Playfair Display',serif;font-size:.86rem;color:var(--cream);margin-bottom:2px}
+.mm{font-size:.68rem;color:var(--dim)}
+.mbadge{display:inline-flex;align-items:center;gap:3px;background:rgba(255,107,107,.1);color:var(--red);font-size:.64rem;font-weight:600;padding:2px 6px;border-radius:20px;margin-top:4px}
+
+/* MATCH MODAL */
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;align-items:center;justify-content:center}
+.mo.show{display:flex;animation:fi .25s}
+.mm2{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:34px;max-width:360px;width:90%;text-align:center;animation:pi .4s cubic-bezier(.34,1.56,.64,1)}
+.mh{font-size:2.4rem;margin-bottom:11px;animation:pu 1s infinite}
+.mm2 h2{font-family:'Playfair Display',serif;font-size:1.7rem;color:var(--gold);margin-bottom:6px}
+.mm2 p{color:var(--dim);font-size:.83rem;margin-bottom:13px}
+.ms{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--cream);padding:13px;background:var(--mid);border-radius:10px;margin-bottom:18px}
+.mbtns{display:flex;gap:8px}
+.mbtn2{flex:1;background:transparent;border:1px solid var(--border);color:var(--dim);font-family:'Inter',sans-serif;font-weight:500;font-size:.83rem;padding:10px;border-radius:9px;cursor:pointer;transition:all .2s}
+.mbtn2:hover{border-color:var(--gold);color:var(--gold)}
+
+/* SIDE PANEL */
+.stitle{font-size:.65rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.stitle::after{content:'';flex:1;height:1px;background:var(--border)}
+.ssec{margin-bottom:24px}
+.wf{display:flex;flex-direction:column;gap:7px}
+.btnadd{background:rgba(232,192,125,.09);border:1px solid rgba(232,192,125,.25);color:var(--gold);font-family:'Inter',sans-serif;font-weight:600;font-size:.78rem;padding:8px;border-radius:9px;cursor:pointer;transition:all .2s}
+.btnadd:hover{background:rgba(232,192,125,.16)}
+.wl{display:flex;flex-direction:column;gap:6px;margin-top:7px}
+.wi{display:flex;align-items:center;gap:7px;padding:8px 9px;background:var(--mid);border-radius:9px;font-size:.77rem}
+.we{font-size:1rem}.wif{flex:1;min-width:0}
+.wt{color:var(--cream);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wg{color:var(--dim);font-size:.69rem}
+.rb{background:none;border:none;color:var(--dim);cursor:pointer;font-size:.82rem;padding:2px 4px}.rb:hover{color:var(--red)}
+.sugbox{max-height:130px;overflow-y:auto;background:var(--mid);border:1px solid var(--border);border-radius:9px;margin-top:-2px;display:none}
+.si{padding:8px 11px;cursor:pointer;font-size:.77rem;border-bottom:1px solid var(--border);transition:background .12s}
+.si:last-child{border-bottom:none}.si:hover{background:rgba(232,192,125,.07)}
+.rl{display:flex;flex-direction:column;gap:8px}
+.ri{display:flex;align-items:center;gap:8px;padding:9px;background:var(--mid);border-radius:10px}
+.re{font-size:1.2rem}.rif{flex:1;min-width:0}
+.rt{font-weight:500;font-size:.8rem;color:var(--cream)}.rg{font-size:.69rem;color:var(--dim);margin-top:1px}
+.rsc{text-align:right}.rp{font-size:.69rem;font-weight:600;color:var(--green)}
+.rsbar{width:34px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-top:3px;overflow:hidden}
+.rsf{height:100%;background:var(--green);border-radius:2px}
+.es{text-align:center;padding:18px 10px;color:var(--dim)}.es .ei{font-size:1.8rem;margin-bottom:8px}.es p{font-size:.77rem;line-height:1.5}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(65px);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 17px;font-size:.8rem;color:var(--cream);z-index:300;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes pi{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes pu{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+@keyframes el{to{transform:translateX(-130%) rotate(-28deg);opacity:0}}
+@keyframes er{to{transform:translateX(130%) rotate(28deg);opacity:0}}
+.xl{animation:el .36s forwards}.xr{animation:er .36s forwards}
+
+@media(max-width:768px){.app{flex-direction:column}.side{width:100%;border-left:none;border-top:1px solid var(--border);max-height:none}}
+</style>
+</head>
+<body>
+
+<div id="ls">
+  <div class="l-logo">Watch<span>♥</span>Together</div>
+  <div id="lp"><div id="lf"></div></div>
+  <div id="lm">Loading 250 shows from your watchlists…</div>
+</div>
+
+<header>
+  <div class="logo">Watch<span>♥</span>Together</div>
+  <span class="rpill" id="rp" onclick="copyCode()">Room: <strong id="rch"></strong> 📋</span>
+  <nav>
+    <button class="tb active" id="tab-swipe" onclick="switchTab('swipe')">Swipe</button>
+    <button class="tb" id="tab-matches" onclick="switchTab('matches')">Matches <span id="mbadge"></span></button>
+  </nav>
+</header>
+
+<div class="app">
+<div class="main">
+
+  <!-- SETUP -->
+  <div class="view active" id="view-setup">
+    <div class="scard">
+      <h2>Movie night? 🎬</h2>
+      <p>Create a room, share the code with your partner. Swipe on separate devices — match when you both heart the same show. 20 shows per round.</p>
+      <div class="ig"><div class="ir"><div class="dot" style="background:var(--red)"></div><input type="text" id="myname" placeholder="Your name" maxlength="20"></div></div>
+      <button class="btn" onclick="createRoom()">Create a Room →</button>
+      <div class="div">already have a code?</div>
+      <div class="ig">
+        <input type="text" id="jcode" placeholder="Room code" style="text-transform:uppercase;letter-spacing:.08em" maxlength="10">
+        <input type="text" id="jname" placeholder="Your name" maxlength="20">
+      </div>
+      <button class="btn" onclick="joinRoom()">Join Room →</button>
+    </div>
+  </div>
+
+  <!-- LOBBY -->
+  <div class="view" id="view-lobby">
+    <div class="lcard">
+      <p style="color:var(--dim);font-size:.83rem">Share this with your partner</p>
+      <div class="rcode" id="lcode" onclick="copyCode()"></div>
+      <p class="chint" onclick="copyCode()">📋 tap to copy</p>
+      <div class="lslots" id="lslots"></div>
+      <div id="lwait" style="display:flex;align-items:center;justify-content:center;gap:9px;color:var(--dim);font-size:.82rem;margin-top:12px"><div class="spin"></div> Waiting for partner…</div>
+      <button class="btn" id="startbtn" style="display:none;margin-top:14px" onclick="startGame()">Start Swiping →</button>
+    </div>
+  </div>
+
+  <!-- SWIPE -->
+  <div class="view" id="view-swipe">
+    <div class="sh">
+      <div class="pb"><div class="dot" style="background:var(--red)"></div><span id="lp1">P1</span></div>
+      <div class="ld">
+        <div class="liv p1 dim" id="lv1"><div class="pip"></div><span id="ln1">P1</span></div>
+        <div class="liv p2 dim" id="lv2"><div class="pip"></div><span id="ln2">P2</span></div>
+      </div>
+      <div class="pb" style="flex-direction:row-reverse"><div class="dot" style="background:var(--blue)"></div><span id="lp2">P2</span></div>
+    </div>
+    <div class="gbar" id="gbar"></div>
+    <div class="sesprog">
+      <div class="spbar"><div class="spfill" id="spfill"></div></div>
+      <div class="sptext" id="sptext"></div>
+    </div>
+    <div class="cs" id="cs">
+      <div class="wo" id="wo"><div class="spin"></div><p id="wt">Loading…</p></div>
+    </div>
+    <div class="ca">
+      <button class="ab anp" onclick="doSwipe('nope')" title="Skip">✕</button>
+      <button class="ab aht" onclick="doSwipe('heart')" title="Heart it!">♥</button>
+      <button class="ab ask" onclick="doSwipe('skip')" title="Decide later">⟳</button>
+    </div>
+    <div class="pt" id="pt"></div>
+  </div>
+
+  <!-- END OF ROUND -->
+  <div class="view" id="view-eor">
+    <div class="eor">
+      <div>
+        <div class="eor-title">Round Complete! 🎬</div>
+        <div class="eor-sub" id="eor-sub"></div>
+      </div>
+      <div class="eor-sec">
+        <div class="eor-sec-title" style="color:var(--red)">❤️ You both hearted</div>
+        <div class="eor-grid" id="eor-both"></div>
+      </div>
+      <div class="eor-sec">
+        <div class="eor-sec-title" style="color:var(--gold)" id="eor-only-me-title">💛 Only you hearted</div>
+        <div class="eor-grid" id="eor-me"></div>
+      </div>
+      <div class="eor-sec">
+        <div class="eor-sec-title" style="color:var(--blue)" id="eor-only-partner-title">💙 Only partner hearted</div>
+        <div class="eor-grid" id="eor-partner"></div>
+      </div>
+      <div class="eor-btns">
+        <button class="btn2" style="max-width:200px" onclick="switchTab('matches')">See All Matches</button>
+        <button class="btn" style="max-width:200px" onclick="nextRound()">Next Round →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MATCHES -->
+  <div class="view" id="view-matches">
+    <div class="mv-title">Your Matches ❤️</div>
+    <div class="mv-sub">Shows you both hearted</div>
+    <div id="mc" style="width:100%;max-width:640px"></div>
+  </div>
+
+</div>
+
+<!-- SIDE PANEL -->
+<div class="side">
+  <div class="ssec">
+    <div class="stitle">Shows You've Watched</div>
+    <div class="wf">
+      <input type="text" id="ws" placeholder="Search to add…" oninput="filterS()">
+      <div class="sugbox" id="sug"></div>
+      <button class="btnadd" onclick="addW()">+ Add to Watched</button>
+    </div>
+    <div class="wl" id="wl"></div>
+  </div>
+  <div class="ssec">
+    <div class="stitle">Recommended</div>
+    <div class="rl" id="rl">
+      <div class="es"><div class="ei">🔮</div><p>Add watched shows to unlock picks</p></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- MATCH MODAL -->
+<div class="mo" id="mmod">
+  <div class="mm2">
+    <div class="mh">❤️🎉❤️</div>
+    <h2>It's a Match!</h2>
+    <p id="mnames"></p>
+    <div class="ms" id="mshow"></div>
+    <div class="mbtns">
+      <button class="mbtn2" onclick="closeMod()">Keep Swiping</button>
+      <button class="btn" style="flex:1;width:auto" onclick="closeMod();switchTab('matches')">See Matches</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL='https://ubetbabujynfiletmjxu.supabase.co';
+const SUPABASE_KEY='sb_publishable_vCHSW2UrmUn27EYzXjqrOA_ScDi_mWe';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+const SHOWS = [
+  {id:1,title:"Stranger Things",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\udd26",year:2016,rating:8.6,desc:"Kids in a small Indiana town uncover government experiments and a terrifying parallel dimension called the Upside Down."},
+  {id:2,title:"The Boys",genre:"Thriller",tags:["Action", "Crime", "Sci-Fi"],emoji:"\ud83d\udca5",year:2019,rating:8.5,desc:"A group of vigilantes take on corrupt, corporate-owned superheroes who abuse their powers behind a PR-friendly facade."},
+  {id:3,title:"How I Met Your Mother",genre:"Comedy",tags:["Comedy", "Romance"],emoji:"\u2615",year:2005,rating:8.3,desc:"Ted Mosby recounts to his kids the long, winding story of how he met their mother \u2014 covering years of New York City dating disasters."},
+  {id:4,title:"Squid Game",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udfe9",year:2021,rating:7.9,desc:"Hundreds of cash-strapped contestants compete in deadly children's games for a life-changing prize, with fatal consequences for losers."},
+  {id:5,title:"Black Mirror",genre:"Sci-Fi",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udcf1",year:2011,rating:8.7,desc:"Near-future anthology series exploring the dark side of technology and how it warps human behaviour in unexpected ways."},
+  {id:6,title:"Attack on Titan",genre:"Fantasy",tags:["Fantasy", "Horror", "Action"],emoji:"\u2694\ufe0f",year:2013,rating:9.1,desc:"Humanity lives inside massive walls to survive giant humanoid monsters \u2014 until the walls fall and a young soldier vows revenge."},
+  {id:7,title:"Rick and Morty",genre:"Sci-Fi",tags:["Sci-Fi", "Comedy", "Animated"],emoji:"\ud83e\uddeb",year:2013,rating:9.0,desc:"A genius alcoholic scientist and his anxious grandson go on wild interdimensional adventures with increasingly dark consequences."},
+  {id:8,title:"Lost",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\u2708\ufe0f",year:2004,rating:8.3,desc:"Survivors of a plane crash on a mysterious island discover it holds supernatural secrets, ancient history, and deadly dangers."},
+  {id:9,title:"Prison Break",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd12",year:2005,rating:8.3,desc:"A structural engineer gets himself imprisoned to break out his wrongly convicted brother before his execution date."},
+  {id:10,title:"The Queen's Gambit",genre:"Drama",tags:["Drama"],emoji:"\u265f\ufe0f",year:2020,rating:8.5,desc:"An orphaned chess prodigy rises through the male-dominated chess world while battling drug and alcohol dependency."},
+  {id:11,title:"Vikings",genre:"Drama",tags:["Action", "Adventure", "Historical"],emoji:"\u26f5",year:2013,rating:8.5,desc:"Ragnar Lothbrok rises from farmer to legendary Norse king, leading raids across Europe and reshaping the ancient world."},
+  {id:12,title:"The Witcher",genre:"Fantasy",tags:["Mystery", "Fantasy", "Action"],emoji:"\u2694\ufe0f",year:2019,rating:7.8,desc:"A monster hunter for hire navigates a morally grey fantasy world where humans are often more monstrous than the beasts."},
+  {id:13,title:"Money Heist",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udc8e",year:2017,rating:8.2,desc:"A criminal mastermind recruits eight thieves to pull off an audacious heist on Spain's Royal Mint, broadcasting their own manifesto."},
+  {id:14,title:"The Sopranos",genre:"Drama",tags:["Crime"],emoji:"\ud83c\udf5d",year:1999,rating:9.2,desc:"New Jersey mob boss Tony Soprano juggles family life and organised crime while attending therapy sessions with a psychiatrist."},
+  {id:15,title:"House of Cards",genre:"Thriller",tags:["Thriller"],emoji:"\ud83c\udccf",year:2013,rating:8.6,desc:"A ruthless Washington politician and his equally ambitious wife scheme and manipulate their way to the top of American power."},
+  {id:16,title:"Dark",genre:"Sci-Fi",tags:["Crime", "Thriller", "Mystery"],emoji:"\u23f3",year:2017,rating:8.7,desc:"A child's disappearance in a German town unravels a time travel conspiracy connecting four families across three centuries."},
+  {id:17,title:"Modern Family",genre:"Comedy",tags:["Comedy", "Romance"],emoji:"\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66",year:2009,rating:8.5,desc:"Three very different households \u2014 traditional, same-sex, and May-December \u2014 navigate family life in a warm mockumentary format."},
+  {id:18,title:"Daredevil",genre:"Sci-Fi",tags:["Crime", "Thriller", "Sci-Fi"],emoji:"\ud83d\ude08",year:2015,rating:8.6,desc:"A blind lawyer by day becomes a masked vigilante by night, cleaning up Hell's Kitchen one brutal fight at a time."},
+  {id:19,title:"Narcos",genre:"Thriller",tags:["Crime", "Thriller", "True Story"],emoji:"\ud83c\udf3f",year:2015,rating:8.7,desc:"The true story of the rise and fall of Pablo Escobar and the Medell\u00edn cocaine cartel told from a DEA agent's perspective."},
+  {id:20,title:"Wednesday",genre:"Fantasy",tags:["Crime", "Mystery", "Fantasy"],emoji:"\ud83d\udda4",year:2022,rating:8.0,desc:"Wednesday Addams solves a murder mystery at Nevermore Academy while navigating teenage life, psychic visions, and the supernatural."},
+  {id:21,title:"Death Note",genre:"Fantasy",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udcd3",year:2006,rating:8.9,desc:"A brilliant student discovers a supernatural notebook that kills anyone whose name is written in it \u2014 and decides to use it to rid the world of criminals."},
+  {id:22,title:"Fargo",genre:"Thriller",tags:["Crime", "Thriller"],emoji:"\u2744\ufe0f",year:2014,rating:8.8,desc:"An anthology crime series set in the frozen Midwest, each season telling a new darkly comic story of ordinary people making catastrophic choices."},
+  {id:23,title:"Arcane",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Action"],emoji:"\u26a1",year:2021,rating:9.0,desc:"Two sisters from the slums of Zaun become enemies in a war between the magical city of Piltover and its oppressed underbelly."},
+  {id:24,title:"South Park",genre:"Comedy",tags:["Comedy", "Animated"],emoji:"\u26c4",year:1997,rating:8.7,desc:"Four foul-mouthed Colorado kids skewer politics, religion, celebrities, and pop culture with zero filter or mercy."},
+  {id:25,title:"Brooklyn Nine-Nine",genre:"Comedy",tags:["Crime", "Comedy"],emoji:"\ud83d\ude94",year:2013,rating:8.4,desc:"The eccentric detectives of a New York precinct solve crimes and clash personalities under a surprisingly perceptive captain."},
+  {id:26,title:"Sex Education",genre:"Comedy",tags:["Comedy", "Romance"],emoji:"\ud83c\udf93",year:2019,rating:8.2,desc:"Teenage Otis \u2014 son of a sex therapist \u2014 sets up an underground advice clinic at his British high school with startling results."},
+  {id:27,title:"Mindhunter",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2017,rating:8.6,desc:"Two FBI agents pioneer criminal profiling in the 1970s by interviewing America's most notorious serial killers."},
+  {id:28,title:"Ozark",genre:"Thriller",tags:["Crime", "Thriller"],emoji:"\ud83d\udcb5",year:2017,rating:8.4,desc:"A financial advisor moves his family to the Missouri Ozarks after a money-laundering scheme goes dangerously wrong."},
+  {id:29,title:"Lucifer",genre:"Fantasy",tags:["Crime", "Fantasy"],emoji:"\ud83d\ude08",year:2016,rating:8.0,desc:"The Devil abandons Hell, opens a nightclub in LA, and becomes a consultant to the LAPD \u2014 solving crimes while avoiding his divine destiny."},
+  {id:30,title:"Homeland",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udea8",year:2011,rating:8.3,desc:"A CIA officer becomes convinced that a recently rescued prisoner of war has been turned into a terrorist asset."},
+  {id:31,title:"Grey's Anatomy",genre:"Drama",tags:["Romance"],emoji:"\ud83c\udfe5",year:2005,rating:7.6,desc:"The personal and professional lives of surgical interns and their supervisors at Seattle's Grace Hospital unfold over many dramatic years."},
+  {id:32,title:"You",genre:"Thriller",tags:["Crime", "Thriller", "Romance"],emoji:"\ud83d\udc40",year:2018,rating:7.6,desc:"A charming bookstore manager becomes dangerously obsessed with the women he falls for, going to terrifying lengths to be with them."},
+  {id:33,title:"American Horror Story",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Horror"],emoji:"\ud83e\ude78",year:2011,rating:7.9,desc:"An anthology horror series where each season tells a completely new terrifying story with a rotating cast of characters."},
+  {id:34,title:"Sons of Anarchy",genre:"Thriller",tags:["Crime", "Thriller"],emoji:"\ud83c\udfcd\ufe0f",year:2008,rating:8.5,desc:"The president of a California motorcycle club tries to steer his club away from crime while keeping his family together."},
+  {id:35,title:"Arrested Development",genre:"Comedy",tags:["Comedy"],emoji:"\ud83c\udf4c",year:2003,rating:8.6,desc:"The one responsible son tries to keep his hilariously dysfunctional wealthy family together after their patriarch is arrested for fraud."},
+  {id:36,title:"Orange Is the New Black",genre:"Comedy",tags:["Crime", "Comedy"],emoji:"\ud83c\udf4a",year:2013,rating:8.0,desc:"A privileged New York woman's life is upended when she's sent to a federal women's prison and discovers a world she never knew existed."},
+  {id:37,title:"The Haunting of Hill House",genre:"Thriller",tags:["Thriller", "Mystery", "Horror"],emoji:"\ud83d\udd0d",year:2018,rating:8.5,desc:"Siblings who grew up in a haunted house are forced to confront their past and the ghosts \u2014 both literal and metaphorical \u2014 that still follow them."},
+  {id:38,title:"Parks and Recreation",genre:"Comedy",tags:["Comedy"],emoji:"\ud83c\udf33",year:2009,rating:8.6,desc:"The cheerfully relentless Leslie Knope and her Pawnee Parks Department tackle local bureaucracy, community projects, and each other."},
+  {id:39,title:"The Umbrella Academy",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Action"],emoji:"\u2602\ufe0f",year:2019,rating:7.8,desc:"Seven adoptive superhero siblings reunite after their father's death and discover a looming apocalypse only they can prevent."},
+  {id:40,title:"Community",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\udcda",year:2009,rating:8.5,desc:"A disgraced lawyer joins a community college study group that becomes a found family navigating bizarre campus adventures."},
+  {id:41,title:"Adolescence",genre:"Thriller",tags:["Crime", "Thriller"],emoji:"\ud83d\udd0d",year:2025,rating:8.1,desc:"A 13-year-old boy is arrested for the murder of a classmate, sending shockwaves through his family and the surrounding community."},
+  {id:42,title:"The Punisher",genre:"Thriller",tags:["Crime", "Thriller", "Action"],emoji:"\ud83d\udd0d",year:2017,rating:8.4,desc:"Former Marine Frank Castle wages a brutal one-man war on the criminals who murdered his family."},
+  {id:43,title:"Firefly",genre:"Sci-Fi",tags:["Sci-Fi", "Adventure"],emoji:"\ud83d\ude80",year:2002,rating:8.9,desc:"A ragtag crew aboard a spaceship at the edge of the galaxy smuggle, fight, and survive in a future where the frontier feels like the Old West."},
+  {id:44,title:"The Handmaid's Tale",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi"],emoji:"\ud83d\ude80",year:2017,rating:8.3,desc:"In a totalitarian theocracy that has replaced the United States, fertile women are enslaved as reproductive vessels for the ruling class."},
+  {id:45,title:"Scrubs",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2001,rating:8.4,desc:"The absurd, heartfelt, and surprisingly emotional daily lives of interns and doctors at Sacred Heart Hospital."},
+  {id:46,title:"The Crown",genre:"Drama",tags:["Historical", "True Story"],emoji:"\ud83d\udc51",year:2016,rating:8.6,desc:"The reign of Queen Elizabeth II unfolds across decades of royal drama, political crisis, and personal sacrifice."},
+  {id:47,title:"Futurama",genre:"Sci-Fi",tags:["Sci-Fi", "Comedy", "Animated"],emoji:"\ud83d\ude80",year:1999,rating:8.5,desc:"A 20th-century pizza delivery boy wakes up in the year 3000 and gets a job at an interplanetary delivery company."},
+  {id:48,title:"The X-Files",genre:"Sci-Fi",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\ude80",year:1993,rating:8.6,desc:"FBI agents Mulder and Scully investigate paranormal cases \u2014 he's a believer, she's a sceptic, and the truth is always out there."},
+  {id:49,title:"Doctor Who",genre:"Sci-Fi",tags:["Sci-Fi", "Adventure"],emoji:"\ud83d\ude80",year:2005,rating:8.5,desc:"A time-travelling alien and his human companions zip across space and history in a blue police box fighting monsters and injustice."},
+  {id:50,title:"Fullmetal Alchemist: Brotherhood",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Action"],emoji:"\u2697\ufe0f",year:2009,rating:9.1,desc:"Two brothers use alchemy to try to resurrect their dead mother, paying a terrible price and embarking on a quest to fix what they've broken."},
+  {id:51,title:"Fleabag",genre:"Drama",tags:["British", "Dark Comedy", "Emotional"],emoji:"\ud83e\udd8a",year:2016,rating:8.7,desc:"A sharp, grief-stricken London woman breaks the fourth wall to let us in on her chaotic love life, complicated family, and razor-sharp observations."},
+  {id:52,title:"Twin Peaks",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:1990,rating:8.7,desc:"FBI agent Dale Cooper investigates the murder of homecoming queen Laura Palmer in a small Pacific Northwest town full of dark secrets."},
+  {id:53,title:"The End of the F***ing World",genre:"Comedy",tags:["Crime", "Thriller", "Comedy"],emoji:"\ud83d\ude04",year:2017,rating:8.0,desc:"A self-diagnosed psychopath and a rebellious teenage girl go on the run across England in this darkly funny coming-of-age story."},
+  {id:54,title:"Cobra Kai",genre:"Comedy",tags:["Action", "Comedy"],emoji:"\ud83d\ude04",year:2018,rating:8.4,desc:"The Karate Kid rivalry reignites decades later as Johnny Lawrence reopens the Cobra Kai dojo and Daniel LaRusso tries to stop him."},
+  {id:55,title:"Jessica Jones",genre:"Sci-Fi",tags:["Crime", "Thriller", "Sci-Fi"],emoji:"\ud83d\ude80",year:2015,rating:7.8,desc:"A hard-drinking private investigator with superhuman strength confronts her traumatic past when a mind-controlling villain resurfaces."},
+  {id:56,title:"Agents of S.H.I.E.L.D.",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Action"],emoji:"\ud83d\ude80",year:2013,rating:7.5,desc:"Agent Coulson leads a team of specialists investigating the weird and dangerous in the Marvel Cinematic Universe."},
+  {id:57,title:"BoJack Horseman",genre:"Comedy",tags:["Comedy", "Animated"],emoji:"\ud83d\udc34",year:2014,rating:8.8,desc:"A washed-up 1990s sitcom star \u2014 who happens to be a horse \u2014 spirals through depression, addiction, and fleeting moments of self-awareness."},
+  {id:58,title:"Love, Death & Robots",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2019,rating:8.4,desc:"An animated anthology of short films spanning sci-fi, horror, fantasy, and dark comedy \u2014 each one wildly different from the last."},
+  {id:59,title:"Bridgerton",genre:"Drama",tags:["Romance"],emoji:"\ud83c\udfad",year:2020,rating:7.5,desc:"High society romance blooms in Regency-era London, narrated by the mysterious Lady Whistledown whose gossip column rules the ton."},
+  {id:60,title:"Demon Slayer: Kimetsu no Yaiba",genre:"Fantasy",tags:["Thriller", "Fantasy", "Action"],emoji:"\u2694\ufe0f",year:2019,rating:8.6,desc:"A kind boy trains to become a demon slayer after his family is slaughtered and his sister is turned into a demon."},
+  {id:61,title:"One Punch Man",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Action"],emoji:"\ud83d\ude80",year:2015,rating:8.6,desc:"The world's most powerful hero can defeat any enemy with a single punch \u2014 and is profoundly bored because of it."},
+  {id:62,title:"Naruto: Shippuden",genre:"Fantasy",tags:["Fantasy", "Action", "Comedy"],emoji:"\u2694\ufe0f",year:2007,rating:8.7,desc:"Naruto Uzumaki, now a teenage ninja, continues his quest to become Hokage while facing a powerful organisation hunting tailed beasts."},
+  {id:63,title:"Monster",genre:"Thriller",tags:["Crime", "Thriller", "True Story"],emoji:"\ud83d\udd0d",year:2022,rating:7.7,desc:"A brilliant surgeon saves a mysterious boy's life, only to discover the boy grows up to become a serial killer \u2014 and he might be responsible."},
+  {id:64,title:"The Good Place",genre:"Fantasy",tags:["Mystery", "Fantasy", "Comedy"],emoji:"\u2694\ufe0f",year:2016,rating:8.2,desc:"A not-very-good woman accidentally ends up in heaven and tries to become a better person before anyone realises the mistake."},
+  {id:65,title:"The Sandman",genre:"Sci-Fi",tags:["Mystery", "Sci-Fi", "Fantasy"],emoji:"\ud83d\ude80",year:2022,rating:7.6,desc:"Dream, the immortal ruler of the realm of dreams, is captured for a century and must rebuild his kingdom after his escape."},
+  {id:66,title:"One Piece",genre:"Fantasy",tags:["Fantasy", "Action", "Comedy"],emoji:"\u2694\ufe0f",year:2023,rating:8.3,desc:"Monkey D. Luffy and his crew of pirates sail the seas in search of the legendary treasure called the One Piece to become King of the Pirates."},
+  {id:67,title:"Altered Carbon",genre:"Sci-Fi",tags:["Sci-Fi", "Action", "Adventure"],emoji:"\ud83d\ude80",year:2018,rating:7.9,desc:"In a future where consciousness can be transferred between bodies, a soldier is brought back to life to solve a wealthy man's murder."},
+  {id:68,title:"Hunter X Hunter",genre:"Fantasy",tags:["Fantasy", "Action", "Comedy"],emoji:"\u2694\ufe0f",year:2011,rating:9.0,desc:"A boy discovers his missing father is a legendary Hunter and sets out to pass the dangerous Hunter Exam to find him."},
+  {id:69,title:"Californication",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2007,rating:8.3,desc:"A self-destructive New York writer moves to LA, tries to fix his relationship with his daughter, and spectacularly fails to stay out of trouble."},
+  {id:70,title:"Jack Ryan",genre:"Thriller",tags:["Crime", "Thriller", "Action"],emoji:"\ud83c\udfaf",year:2018,rating:8.0,desc:"CIA analyst Jack Ryan is thrust into the field when he uncovers a terrifying plot while analysing intelligence data."},
+  {id:71,title:"Baby Reindeer",genre:"Comedy",tags:["Comedy", "True Story"],emoji:"\ud83e\udd8c",year:2024,rating:7.7,desc:"A struggling comedian's life unravels when a woman he shows kindness to becomes his obsessive stalker in this unsettling true story."},
+  {id:72,title:"The Expanse",genre:"Sci-Fi",tags:["Sci-Fi", "Space", "Political"],emoji:"\ud83e\ude90",year:2015,rating:8.5,desc:"Humanity has colonised the solar system but political tensions between Earth, Mars, and the outer planets push everyone toward war."},
+  {id:73,title:"Bones",genre:"Drama",tags:["Crime", "Mystery"],emoji:"\ud83c\udfad",year:2005,rating:7.8,desc:"A forensic anthropologist and a FBI agent solve murders using skeletal remains in this long-running crime procedural."},
+  {id:74,title:"The Last Kingdom",genre:"Drama",tags:["Action", "Historical"],emoji:"\ud83c\udfad",year:2015,rating:8.5,desc:"A Saxon-born nobleman raised by Vikings navigates the brutal politics of 9th-century England as he tries to reclaim his birthright."},
+  {id:75,title:"Battlestar Galactica",genre:"Sci-Fi",tags:["Sci-Fi", "Action", "Adventure"],emoji:"\ud83d\ude80",year:2004,rating:8.7,desc:"The last of humanity flees robot Cylons across space, searching for a mythical planet called Earth while Cylons hide among them."},
+  {id:76,title:"3 Body Problem",genre:"Sci-Fi",tags:["Mystery", "Sci-Fi", "Fantasy"],emoji:"\ud83d\ude80",year:2024,rating:7.5,desc:"Scientists across the world are drawn into a mystery that connects a secret 1960s Chinese project to an alien civilisation planning an invasion."},
+  {id:77,title:"The Last Dance",genre:"Drama",tags:["Historical", "True Story"],emoji:"\ud83c\udfad",year:2020,rating:9.0,desc:"The inside story of Michael Jordan and the Chicago Bulls dynasty during their final championship run in the 1997-98 season."},
+  {id:78,title:"Gravity Falls",genre:"Fantasy",tags:["Fantasy", "Comedy", "Animated"],emoji:"\ud83c\udf32",year:2012,rating:8.9,desc:"Twin siblings spend the summer with their great-uncle in a mystery-filled Oregon town and discover it's far weirder than they imagined."},
+  {id:79,title:"The Gentlemen",genre:"Comedy",tags:["Crime", "Action", "Comedy"],emoji:"\ud83d\ude04",year:2024,rating:8.0,desc:"A British aristocrat discovers his family's country estate is the heart of a highly profitable marijuana empire."},
+  {id:80,title:"How to Get Away with Murder",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2014,rating:8.1,desc:"A ruthless criminal defence professor and her five students become entangled in a murder plot that keeps getting more complicated."},
+  {id:81,title:"Archer",genre:"Comedy",tags:["Action", "Comedy", "Animated"],emoji:"\ud83d\ude04",year:2009,rating:8.6,desc:"The world's most self-absorbed secret agent and his dysfunctional ISIS colleagues stumble through international espionage in animated style."},
+  {id:82,title:"Beef",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude97",year:2023,rating:8.0,desc:"A road rage incident between two strangers in LA spirals into an all-consuming feud that exposes the darkest corners of both their lives."},
+  {id:83,title:"Buffy the Vampire Slayer",genre:"Fantasy",tags:["Fantasy", "Horror", "Action"],emoji:"\u2694\ufe0f",year:1997,rating:8.3,desc:"A teenage girl chosen as the Slayer fights vampires, demons, and the forces of darkness while navigating high school in Sunnydale."},
+  {id:84,title:"This Is Us",genre:"Comedy",tags:["Comedy", "Romance"],emoji:"\ud83d\ude04",year:2016,rating:8.7,desc:"The intertwined stories of the Pearson family told across different time periods, exploring love, loss, and what makes a family."},
+  {id:85,title:"Sense8",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2015,rating:8.2,desc:"Eight strangers around the world discover they are mentally and emotionally linked, hunted by a mysterious organisation for what they are."},
+  {id:86,title:"Midnight Mass",genre:"Fantasy",tags:["Mystery", "Fantasy", "Horror"],emoji:"\u2694\ufe0f",year:2021,rating:7.7,desc:"A charismatic young priest arrives on a remote island community and begins performing apparent miracles with terrifying consequences."},
+  {id:87,title:"Cowboy Bebop",genre:"Sci-Fi",tags:["Sci-Fi", "Action", "Comedy"],emoji:"\ud83d\ude80",year:1998,rating:8.9,desc:"A ragtag crew of bounty hunters travel the solar system tracking criminals while running from their own complicated pasts."},
+  {id:88,title:"After Life",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2019,rating:8.4,desc:"A man whose wife died of cancer decides to say and do whatever he wants as a punishment to the world \u2014 until others teach him to grieve."},
+  {id:89,title:"Naruto",genre:"Fantasy",tags:["Fantasy", "Action", "Comedy"],emoji:"\u2694\ufe0f",year:2002,rating:8.4,desc:"A mischievous young ninja with a demon fox sealed inside him dreams of becoming the greatest ninja and earning the respect of his village."},
+  {id:90,title:"Taboo",genre:"Thriller",tags:["Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2017,rating:8.3,desc:"A mysterious man returns to 1814 London to claim his father's estate and finds himself at war with the East India Company."},
+  {id:91,title:"Malcolm in the Middle",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2000,rating:8.2,desc:"The genius middle child of a hilariously chaotic family navigates being too smart for his own good and too normal for anyone to notice."},
+  {id:92,title:"When They See Us",genre:"Drama",tags:["Crime", "Historical", "True Story"],emoji:"\ud83c\udfad",year:2019,rating:8.8,desc:"The devastating true story of five Black and Latino teenagers falsely convicted of a brutal assault in Central Park in 1989."},
+  {id:93,title:"Lupin",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2021,rating:7.5,desc:"Inspired by the gentleman thief Ars\u00e8ne Lupin, a man uses disguise and cunning to steal from the corrupt French elite."},
+  {id:94,title:"The Marvelous Mrs. Maisel",genre:"Comedy",tags:["Comedy"],emoji:"\ud83c\udfa4",year:2017,rating:8.6,desc:"A 1950s New York housewife discovers she has a gift for stand-up comedy after her husband leaves her and decides to pursue it seriously."},
+  {id:95,title:"Desperate Housewives",genre:"Comedy",tags:["Mystery", "Comedy", "Romance"],emoji:"\ud83d\ude04",year:2004,rating:7.6,desc:"The darkly comic secrets of the residents of Wisteria Lane unfold through the narration of their dead neighbour."},
+  {id:96,title:"Smallville",genre:"Sci-Fi",tags:["Sci-Fi", "Action", "Adventure"],emoji:"\ud83d\ude80",year:2001,rating:7.5,desc:"Clark Kent grows up on a Kansas farm, slowly discovering his alien powers and the heroic destiny that awaits him."},
+  {id:97,title:"Killing Eve",genre:"Thriller",tags:["Thriller", "Action", "Adventure"],emoji:"\ud83d\udd0d",year:2018,rating:8.1,desc:"A bored British intelligence officer becomes obsessed with tracking a psychopathic assassin \u2014 and the obsession becomes dangerously mutual."},
+  {id:98,title:"White Collar",genre:"Comedy",tags:["Crime", "Mystery", "Comedy"],emoji:"\ud83d\ude04",year:2009,rating:8.2,desc:"A charming con artist works alongside the FBI agent who caught him to solve white-collar crimes in New York City."},
+  {id:99,title:"Alice in Borderland",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2020,rating:7.8,desc:"A video game-obsessed young man finds himself in a deserted Tokyo where he must compete in deadly games to survive."},
+  {id:100,title:"Star Wars: The Clone Wars",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Action"],emoji:"\ud83d\ude80",year:2008,rating:8.5,desc:"The epic animated series covering the Clone Wars between Episodes II and III with Anakin Skywalker, Obi-Wan, and Ahsoka Tano."},
+  {id:101,title:"Law & Order: Special Victims Unit",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:1999,rating:8.1,desc:"The detectives of Manhattan's Special Victims Unit investigate sexually based crimes in this long-running procedural drama."},
+  {id:102,title:"Unbelievable",genre:"Drama",tags:["Crime"],emoji:"\ud83c\udfad",year:2019,rating:8.3,desc:"A teenager's rape report is dismissed as a lie by police while two female detectives in another state hunt the same serial rapist."},
+  {id:103,title:"The Fall of the House of Usher",genre:"Drama",tags:["Mystery", "Horror"],emoji:"\ud83c\udfad",year:2023,rating:7.9,desc:"A powerful business dynasty collapses as its heirs die one by one in mysterious and gruesome ways, revealing a dark Faustian bargain."},
+  {id:104,title:"Lie to Me",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2009,rating:8.0,desc:"A scientist who studies microexpressions and body language helps the FBI solve crimes by detecting when anyone is lying."},
+  {id:105,title:"The Killing",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2011,rating:8.3,desc:"A Seattle detective investigates the murder of a teenage girl in a case that connects a local political campaign to a dark conspiracy."},
+  {id:106,title:"Adventure Time",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Action"],emoji:"\ud83d\ude80",year:2010,rating:8.7,desc:"Jake the dog and Finn the human go on magical adventures in the Land of Ooo \u2014 a post-apocalyptic world that doesn't know it is one."},
+  {id:107,title:"The Office",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2001,rating:8.5,desc:"The daily lives of the employees of Dunder Mifflin paper company in Scranton, Pennsylvania, captured in deadpan mockumentary style."},
+  {id:108,title:"The Good Doctor",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2017,rating:8.0,desc:"A young surgical resident with autism and savant syndrome fights to prove himself at a prestigious hospital."},
+  {id:109,title:"The Rookie",genre:"Drama",tags:["Crime", "Action"],emoji:"\ud83c\udfad",year:2018,rating:8.0,desc:"A 40-year-old man becomes the oldest rookie in the LAPD and must prove to his younger colleagues he belongs on the force."},
+  {id:110,title:"Revenge",genre:"Thriller",tags:["Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2011,rating:7.8,desc:"A young woman returns to the Hamptons under a false identity to systematically destroy the people who framed her father."},
+  {id:111,title:"Cyberpunk: Edgerunners",genre:"Sci-Fi",tags:["Crime", "Thriller", "Sci-Fi"],emoji:"\ud83d\ude80",year:2022,rating:8.3,desc:"A street kid tries to survive in a city obsessed with power and body modification by becoming an outlaw mercenary called an Edgerunner."},
+  {id:112,title:"The OA",genre:"Sci-Fi",tags:["Mystery", "Sci-Fi", "Fantasy"],emoji:"\ud83d\ude80",year:2016,rating:7.8,desc:"A blind woman returns after seven years with her sight mysteriously restored and claims to have visited the afterlife."},
+  {id:113,title:"What We Do in the Shadows",genre:"Fantasy",tags:["Fantasy", "Horror", "Comedy"],emoji:"\u2694\ufe0f",year:2019,rating:8.5,desc:"A documentary crew follows three ancient vampire roommates in Staten Island as they struggle to adapt to modern American life."},
+  {id:114,title:"Elementary",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2012,rating:7.9,desc:"A modern Sherlock Holmes works as a consultant to the NYPD after rehab, alongside his sober companion Dr Joan Watson."},
+  {id:115,title:"Good Omens",genre:"Fantasy",tags:["Fantasy", "Comedy", "British"],emoji:"\ud83d\ude07",year:2019,rating:8.0,desc:"An angel and a demon who've grown fond of life on Earth team up to prevent the apocalypse neither of them actually wants."},
+  {id:116,title:"Black Sails",genre:"Drama",tags:["Action", "Adventure"],emoji:"\ud83c\udfad",year:2014,rating:8.2,desc:"The prequel to Treasure Island follows the pirate Captain Flint and his crew in the golden age of piracy in the Bahamas."},
+  {id:117,title:"Shadow and Bone",genre:"Fantasy",tags:["Mystery", "Fantasy", "Action"],emoji:"\u2694\ufe0f",year:2021,rating:7.5,desc:"A soldier discovers a rare power that could free her nation from the monsters in the darkness \u2014 and draws dangerous attention."},
+  {id:118,title:"11.22.63",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2016,rating:8.0,desc:"A man travels back in time to prevent the assassination of JFK, but the past keeps fighting back against him."},
+  {id:119,title:"My Hero Academia",genre:"Sci-Fi",tags:["Sci-Fi", "Action", "Animated"],emoji:"\ud83d\ude80",year:2016,rating:8.2,desc:"In a world where most people have superpowers, a boy born without any dreams of becoming the greatest hero of all."},
+  {id:120,title:"Maid",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2021,rating:8.3,desc:"A young mother flees domestic abuse and navigates the infuriating US welfare system while trying to build a safe life for her daughter."},
+  {id:121,title:"Billions",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2016,rating:8.3,desc:"A ruthless US Attorney and a brilliant hedge fund manager wage an epic war of money, ego, and power in New York City."},
+  {id:122,title:"My Name Is Earl",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2005,rating:7.8,desc:"A small-time criminal makes a list of all the bad things he's done and tries to fix them one by one after discovering karma."},
+  {id:123,title:"Russian Doll",genre:"Comedy",tags:["Mystery", "Comedy"],emoji:"\ud83d\ude04",year:2019,rating:7.7,desc:"A woman keeps dying and reliving the same night of her 36th birthday party, and has no idea why or how to stop it."},
+  {id:124,title:"Dept. Q",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2025,rating:8.1,desc:"A Copenhagen detective leads a cold case department with a tiny team, reopening unsolved cases that others have written off."},
+  {id:125,title:"Atypical",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2017,rating:8.2,desc:"A teenager with autism decides he wants to date, setting off a chain of events that forces his whole family to adapt and grow."},
+  {id:126,title:"Misfits",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Comedy"],emoji:"\ud83d\ude80",year:2009,rating:8.1,desc:"Five young offenders doing community service are hit by a freak storm and wake up with strange \u2014 and mostly useless \u2014 superpowers."},
+  {id:127,title:"The Family Man",genre:"Thriller",tags:["Action", "Thriller", "Indian"],emoji:"\ud83d\udd75\ufe0f",year:2019,rating:8.7,desc:"A senior intelligence officer balances a middle-class Mumbai life while going undercover to prevent a major terrorist attack."},
+  {id:128,title:"Dead to Me",genre:"Comedy",tags:["Crime", "Comedy"],emoji:"\ud83d\ude04",year:2019,rating:7.9,desc:"Two women \u2014 one uptight, one a free spirit \u2014 bond at a grief support group and form an unlikely friendship built on dark secrets."},
+  {id:129,title:"Stargate SG-1",genre:"Sci-Fi",tags:["Sci-Fi", "Action", "Adventure"],emoji:"\ud83d\ude80",year:1997,rating:8.4,desc:"A military team travels through an ancient alien portal to explore distant planets, fighting alien threats and uncovering ancient mysteries."},
+  {id:130,title:"The Orville",genre:"Sci-Fi",tags:["Sci-Fi", "Comedy", "Adventure"],emoji:"\ud83d\ude80",year:2017,rating:8.0,desc:"A less-than-distinguished officer commands a mid-level spaceship in the Earth Union, with a crew that includes his ex-wife."},
+  {id:131,title:"Ginny & Georgia",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2021,rating:7.5,desc:"A free-spirited mother and her more grounded teenage daughter move to a small New England town with secrets they're both hiding."},
+  {id:132,title:"Making a Murderer",genre:"Thriller",tags:["Crime"],emoji:"\ud83d\udd0d",year:2015,rating:8.5,desc:"The gripping true story of Steven Avery, who was exonerated of one crime after 18 years only to be convicted of another."},
+  {id:133,title:"Outer Banks",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2020,rating:7.5,desc:"A group of working-class teens in North Carolina go on a treasure hunt that puts them in the crosshairs of dangerous enemies."},
+  {id:134,title:"Code Geass: Lelouch of the Rebellion",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Fantasy"],emoji:"\ud83d\ude80",year:2006,rating:8.7,desc:"An exiled prince gains the power to give anyone an irresistible order and launches a rebellion against an empire that controls the world."},
+  {id:135,title:"Blue Eye Samurai",genre:"Thriller",tags:["Thriller", "Action", "Animated"],emoji:"\ud83d\udde1\ufe0f",year:2023,rating:8.7,desc:"In Edo-period Japan, a half-white, half-Japanese swordsman seeks revenge against the four white men who could be their father."},
+  {id:136,title:"The O.C.",genre:"Comedy",tags:["Comedy", "Romance"],emoji:"\ud83d\ude04",year:2003,rating:7.6,desc:"A troubled teenager from a rough background is taken in by a wealthy Newport Beach family and disrupts their polished social world."},
+  {id:137,title:"Pride and Prejudice",genre:"Drama",tags:["Romance"],emoji:"\ud83c\udfad",year:1995,rating:8.8,desc:"Elizabeth Bennet and the proud Mr Darcy clash and fall in love in this definitive BBC adaptation of Jane Austen's classic novel."},
+  {id:138,title:"Legion",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Action"],emoji:"\ud83d\ude80",year:2017,rating:8.1,desc:"A man who has struggled with schizophrenia his whole life discovers he may actually be one of the most powerful mutants alive."},
+  {id:139,title:"Frasier",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:1993,rating:8.2,desc:"A pompous Seattle radio psychiatrist navigates his relationship with his working-class father, his colleagues, and his own ego."},
+  {id:140,title:"Bob's Burgers",genre:"Comedy",tags:["Comedy", "Animated"],emoji:"\ud83d\ude04",year:2011,rating:8.2,desc:"The lovable Belcher family runs a struggling burger restaurant, facing quirky competitors and their own wonderfully weird family dynamics."},
+  {id:141,title:"Narcos: Mexico",genre:"Thriller",tags:["Crime", "Thriller", "True Story"],emoji:"\ud83d\udd0d",year:2018,rating:8.3,desc:"The origin story of the Mexican drug trade, following Miguel \u00c1ngel F\u00e9lix Gallardo as he builds a powerful cartel from scratch."},
+  {id:142,title:"Ray Donovan",genre:"Drama",tags:["Crime"],emoji:"\ud83c\udfad",year:2013,rating:8.3,desc:"A fixer for the rich and famous in Los Angeles cleans up their messes while his own chaotic Boston family complicates everything."},
+  {id:143,title:"Unorthodox",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2020,rating:8.0,desc:"A young ultra-Orthodox Jewish woman flees her arranged marriage in Brooklyn and starts a new life in Berlin."},
+  {id:144,title:"Atlanta",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2016,rating:8.6,desc:"Two cousins navigate the Atlanta rap scene while trying to improve their lives in this surreal, genre-defying comedy."},
+  {id:145,title:"Big Mouth",genre:"Comedy",tags:["Comedy", "Animated", "Romance"],emoji:"\ud83d\ude04",year:2017,rating:7.8,desc:"Animated comedy following New York middle schoolers as their hormone monsters guide them through the horrors of puberty."},
+  {id:146,title:"The Lincoln Lawyer",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2022,rating:7.8,desc:"A defence attorney operates out of the back of his Lincoln Town Car, navigating a morally complex legal world in Los Angeles."},
+  {id:147,title:"The Diplomat",genre:"Thriller",tags:["Thriller"],emoji:"\ud83d\udd0d",year:2023,rating:8.0,desc:"A US ambassador to the UK navigates an international crisis while managing her husband's political ambitions and her own career."},
+  {id:148,title:"Sacred Games",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2018,rating:8.5,desc:"A Mumbai police officer is tipped off by a gangster who claims the city will be destroyed in 25 days in this gripping Indian thriller."},
+  {id:149,title:"Bosch",genre:"Thriller",tags:["Crime", "Mystery", "LA"],emoji:"\ud83d\udd26",year:2014,rating:8.5,desc:"A relentless LAPD homicide detective investigates a child's murder while facing a departmental trial for shooting a suspect."},
+  {id:150,title:"The Shield",genre:"Thriller",tags:["Crime", "Thriller"],emoji:"\ud83d\udd0d",year:2002,rating:8.7,desc:"A corrupt but effective detective runs a brutal strike team in a tough LA precinct, always one step ahead of internal affairs."},
+  {id:151,title:"Never Have I Ever",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2020,rating:7.8,desc:"An overachieving Indian-American teenager deals with grief, boys, and high school rivalries in this coming-of-age comedy."},
+  {id:152,title:"Castlevania",genre:"Fantasy",tags:["Fantasy", "Horror", "Action"],emoji:"\u2694\ufe0f",year:2017,rating:8.3,desc:"When Dracula declares war on humanity after his wife is burned at the stake, a monster hunter teams up with unlikely allies to stop him."},
+  {id:153,title:"Scandal",genre:"Drama",tags:["Political", "Thriller", "Female Lead"],emoji:"\ud83d\udd31",year:2012,rating:7.9,desc:"A crisis management expert and former White House Communications Director uses her fixer skills to protect the powerful while hiding explosive secrets of her own."},
+  {id:154,title:"One Tree Hill",genre:"Drama",tags:["Romance"],emoji:"\ud83c\udfad",year:2003,rating:7.8,desc:"Two half-brothers \u2014 one popular, one brooding \u2014 compete on the basketball court and in love in a small North Carolina town."},
+  {id:155,title:"CSI: Crime Scene Investigation",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2000,rating:7.7,desc:"Las Vegas forensic investigators use cutting-edge science to solve grisly crimes in this pioneering procedural."},
+  {id:156,title:"Merlin",genre:"Fantasy",tags:["Fantasy", "Adventure"],emoji:"\u2694\ufe0f",year:2008,rating:7.9,desc:"A young Merlin arrives in Camelot as a servant to Prince Arthur, secretly using magic in a kingdom where it's punishable by death."},
+  {id:157,title:"Steins; Gate",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2011,rating:8.8,desc:""},
+  {id:158,title:"Mirzapur",genre:"Thriller",tags:["Crime", "Thriller", "Indian"],emoji:"\ud83d\udd2b",year:2018,rating:8.4,desc:"Two brothers from a small town get drawn into the brutal criminal underworld of Mirzapur, ruled by a ruthless crime boss and his volatile son."},
+  {id:159,title:"Heartstopper",genre:"Drama",tags:["Romance"],emoji:"\ud83c\udfad",year:2022,rating:8.5,desc:"Two teenage boys at a British grammar school develop a sweet and tender friendship that quietly turns into something more."},
+  {id:160,title:"Maniac",genre:"Sci-Fi",tags:["Sci-Fi", "Comedy"],emoji:"\ud83d\ude80",year:2018,rating:7.6,desc:"Two strangers bond during a pharmaceutical drug trial that sends their minds into surreal, interconnected alternate realities."},
+  {id:161,title:"Bleach",genre:"Fantasy",tags:["Fantasy", "Action", "Animated"],emoji:"\u2694\ufe0f",year:2004,rating:8.2,desc:"A teenager gains the powers of a Soul Reaper and must defend the living world against evil spirits called Hollows."},
+  {id:162,title:"Kota Factory",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2019,rating:9.0,desc:"Shot in black and white, this Indian series follows students grinding through the pressure-cooker coaching institutes of Kota to get into IIT."},
+  {id:163,title:"All of Us Are Dead",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Fantasy"],emoji:"\ud83d\ude80",year:2022,rating:7.6,desc:"A zombie virus breaks out at a Korean high school, trapping students inside as they fight to survive and reach their families."},
+  {id:164,title:"Godless",genre:"Drama",tags:["Action"],emoji:"\ud83c\udfad",year:2017,rating:8.2,desc:"An outlaw hides in a small New Mexico town populated almost entirely by women while a ruthless gang boss hunts him across the frontier."},
+  {id:165,title:"Tiger King",genre:"Thriller",tags:["Crime", "True Story"],emoji:"\ud83d\udd0d",year:2020,rating:7.5,desc:"The wild, jaw-dropping story of Joe Exotic, his big cat zoo, and the bitter feud that led to a murder-for-hire plot."},
+  {id:166,title:"Over the Garden Wall",genre:"Fantasy",tags:["Mystery", "Fantasy", "Horror"],emoji:"\u2694\ufe0f",year:2014,rating:8.7,desc:"Two brothers wander through a mysterious forest called the Unknown, guided by a bluebird and hunted by a dark entity called the Beast."},
+  {id:167,title:"The Good Wife",genre:"Drama",tags:["Crime", "Mystery"],emoji:"\ud83c\udfad",year:2009,rating:8.3,desc:"After her husband's political scandal, a lawyer returns to work at a top Chicago firm and discovers she's better at this than anyone knew."},
+  {id:168,title:"Preacher",genre:"Fantasy",tags:["Mystery", "Fantasy", "Comedy"],emoji:"\u2694\ufe0f",year:2016,rating:7.9,desc:"A Texas preacher gains the power to make anyone do anything he says and sets off to find God \u2014 literally \u2014 with his girlfriend and a vampire."},
+  {id:169,title:"American Primeval",genre:"Thriller",tags:["Thriller", "Action"],emoji:"\ud83d\udd0d",year:2025,rating:8.0,desc:"The brutal and unforgiving story of the American West in 1857, where settlers, soldiers, and Native Americans collide with deadly results."},
+  {id:170,title:"Louie",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2010,rating:8.5,desc:"Semi-autobiographical comedy following stand-up comedian Louis CK navigating single fatherhood, failed relationships, and New York City."},
+  {id:171,title:"Superstore",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2015,rating:7.8,desc:"The employees of a big-box retail store in Missouri navigate corporate absurdity, workplace romance, and the everyday chaos of retail life."},
+  {id:172,title:"The Bridge",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2011,rating:8.6,desc:"A murder on the bridge between Sweden and Denmark forces two very different detectives from each country to work reluctantly together."},
+  {id:173,title:"Star Trek: Voyager",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Action"],emoji:"\ud83d\ude80",year:1995,rating:7.9,desc:"Stranded in a distant quadrant of the galaxy, the crew of USS Voyager must make a 70-year journey home \u2014 together."},
+  {id:174,title:"Marco Polo",genre:"Drama",tags:["Action", "Adventure", "Historical"],emoji:"\ud83c\udfad",year:2014,rating:7.9,desc:"The young Marco Polo navigates the treacherous court of Kublai Khan's Mongol empire in this sweeping historical epic."},
+  {id:175,title:"Unbreakable Kimmy Schmidt",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2015,rating:7.5,desc:"A woman rescued from a doomsday cult moves to New York City and refuses to let her traumatic past define her relentlessly upbeat outlook."},
+  {id:176,title:"Veronica Mars",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2004,rating:8.3,desc:"A sharp teenage detective in a socially divided California town solves crimes ranging from petty drama to serious murder cases."},
+  {id:177,title:"Santa Clarita Diet",genre:"Comedy",tags:["Horror", "Comedy"],emoji:"\ud83d\ude04",year:2017,rating:7.8,desc:"A suburban California realtor becomes a zombie and develops a taste for human flesh \u2014 her husband tries to help her manage."},
+  {id:178,title:"I Am Not Okay with This",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Comedy"],emoji:"\ud83d\ude80",year:2020,rating:7.5,desc:"A teenager in a small town discovers she has telekinetic powers, which grow increasingly uncontrollable as her life gets more stressful."},
+  {id:179,title:"Nobody Wants This",genre:"Comedy",tags:["Comedy", "Romance"],emoji:"\ud83d\ude04",year:2024,rating:7.7,desc:"A podcast host and a rabbi start an unlikely romance that confounds everyone around them but makes perfect sense to them."},
+  {id:180,title:"Burn Notice",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2007,rating:8.0,desc:"A burned spy uses his tradecraft skills to help people in Miami while trying to figure out who had him blacklisted and why."},
+  {id:181,title:"Tokyo Ghoul",genre:"Fantasy",tags:["Thriller", "Fantasy", "Horror"],emoji:"\u2694\ufe0f",year:2014,rating:7.7,desc:"A college student is transformed into a half-ghoul after a near-fatal encounter and must navigate a hidden world of flesh-eating monsters."},
+  {id:182,title:"Anne with an E",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2017,rating:8.6,desc:"A reimagining of Anne of Green Gables, following the imaginative red-haired orphan as she finds her place in a Prince Edward Island community."},
+  {id:183,title:"Line of Duty",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2012,rating:8.7,desc:"An anti-corruption unit investigates whether a decorated police detective is secretly working for organised crime."},
+  {id:184,title:"Angel",genre:"Fantasy",tags:["Thriller", "Fantasy", "Action"],emoji:"\u2694\ufe0f",year:1999,rating:7.9,desc:"Vampire-with-a-soul Angel moves to Los Angeles to help the hopeless, running a detective agency for supernatural cases."},
+  {id:185,title:"Friday Night Lights",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2006,rating:8.7,desc:"The drama on and off the field for a Texas high school football team in a small town where the sport is everything."},
+  {id:186,title:"Sweet Tooth",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Action"],emoji:"\ud83d\ude80",year:2021,rating:7.7,desc:"In a post-apocalyptic world, a hybrid deer-boy sets out to find his mother with the reluctant help of a lone wanderer."},
+  {id:187,title:"ER",genre:"Drama",tags:["Romance"],emoji:"\ud83c\udfad",year:1994,rating:7.9,desc:"The chaotic, emotionally charged world of the emergency room at Chicago's County General Hospital across fifteen dramatic seasons."},
+  {id:188,title:"Master of None",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2015,rating:8.2,desc:"A New York actor navigates his career, relationships, and identity in this thoughtful and often beautiful comedy-drama."},
+  {id:189,title:"Queen Charlotte: A Bridgerton Story",genre:"Drama",tags:["Historical", "Romance"],emoji:"\ud83c\udfad",year:2023,rating:7.6,desc:"The origin story of young Queen Charlotte and how her arranged marriage to King George III became an unexpected love story."},
+  {id:190,title:"Star Trek: Deep Space Nine",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Action"],emoji:"\ud83d\ude80",year:1993,rating:8.1,desc:"Set on a space station near a wormhole, this darker Star Trek explores war, faith, and politics across the galaxy."},
+  {id:191,title:"Stargate: Atlantis",genre:"Sci-Fi",tags:["Sci-Fi", "Action", "Adventure"],emoji:"\ud83d\ude80",year:2004,rating:8.2,desc:"A military-science team discovers the lost city of Atlantis in another galaxy and must survive against a terrifying new enemy."},
+  {id:192,title:"Paranormal",genre:"Fantasy",tags:["Thriller", "Mystery", "Fantasy"],emoji:"\u2694\ufe0f",year:2020,rating:8.0,desc:"Egypt's foremost haematologist encounters supernatural phenomena that challenge his scientific worldview in this Egyptian drama."},
+  {id:193,title:"Regular Show",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Fantasy"],emoji:"\ud83d\ude80",year:2010,rating:8.6,desc:"A slacker blue jay and his best friend gumball machine work as groundskeepers and constantly stumble into surreal, bizarre adventures."},
+  {id:194,title:"Erased",genre:"Sci-Fi",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\ude80",year:2016,rating:8.4,desc:"A man with an ability to jump back in time moments before a tragedy uses it to investigate a childhood kidnapping linked to a present murder."},
+  {id:195,title:"Peep Show",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2003,rating:8.7,desc:"Two deeply flawed London flatmates muddle through life in this cringe comedy filmed entirely from the characters' own point of view."},
+  {id:196,title:"A Series of Unfortunate Events",genre:"Comedy",tags:["Mystery", "Comedy", "Adventure"],emoji:"\ud83d\ude04",year:2017,rating:7.7,desc:"The three Baudelaire orphans are pursued by the villainous Count Olaf, who wants to steal their fortune by any devious means necessary."},
+  {id:197,title:"Travelers",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2016,rating:8.0,desc:"Operatives from a dystopian future are sent back to the present day, inhabiting the bodies of people who were about to die, to prevent catastrophe."},
+  {id:198,title:"Chicago Fire",genre:"Drama",tags:["Action"],emoji:"\ud83c\udfad",year:2012,rating:8.0,desc:"The dangerous and dramatic lives of the firefighters, paramedics, and rescue squad of Chicago Firehouse 51."},
+  {id:199,title:"Don't F**k with Cats: Hunting an Internet Killer",genre:"Thriller",tags:["Crime", "Mystery"],emoji:"\ud83d\udd0d",year:2019,rating:8.0,desc:"A group of Facebook users track down an anonymous man who posted videos of animal cruelty online \u2014 with disturbing results."},
+  {id:200,title:"Ripley",genre:"Thriller",tags:["Crime", "Thriller"],emoji:"\ud83c\udfad",year:2024,rating:8.1,desc:"A small-time con man in 1960s Italy is hired to bring back a wealthy man's son and sees an opportunity to steal his whole identity instead."},
+  {id:201,title:"Good Girls",genre:"Comedy",tags:["Crime", "Comedy"],emoji:"\ud83d\ude04",year:2018,rating:7.7,desc:"Three desperate suburban Michigan women rob a supermarket and get pulled deeper into a life of crime they can't easily escape."},
+  {id:202,title:"The Chestnut Man",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2021,rating:7.6,desc:"A Copenhagen detective and a National Crime Centre agent hunt a serial killer who leaves a chilling corn-husk doll at every crime scene."},
+  {id:203,title:"One Day",genre:"Comedy",tags:["Comedy", "Romance"],emoji:"\ud83d\ude04",year:2024,rating:8.0,desc:"Emma and Dexter meet on their graduation night in 1988 and we check in on them every year on that same date for the next two decades."},
+  {id:204,title:"King of the Hill",genre:"Comedy",tags:["Comedy", "Animated"],emoji:"\ud83d\ude04",year:1997,rating:7.6,desc:"Propane salesman Hank Hill navigates suburban Texas life, trying to understand a changing world that keeps confusing him."},
+  {id:205,title:"Star Trek: Enterprise",genre:"Sci-Fi",tags:["Sci-Fi", "Action", "Adventure"],emoji:"\ud83d\ude80",year:2001,rating:7.6,desc:"The earliest days of space exploration, set 100 years before Kirk and Spock, as humanity makes first contact with new alien species."},
+  {id:206,title:"Black Books",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2000,rating:8.4,desc:"A misanthropic Irish bookshop owner and his dim assistant fend off customers and face their own spectacular personal failings."},
+  {id:207,title:"9-1-1",genre:"Thriller",tags:["Thriller", "Action"],emoji:"\ud83d\udd0d",year:2018,rating:7.9,desc:"The high-pressure lives of first responders \u2014 police, paramedics, and firefighters \u2014 as they respond to emergencies in Los Angeles."},
+  {id:208,title:"Kingdom",genre:"Thriller",tags:["Thriller", "Horror", "Action"],emoji:"\ud83d\udd0d",year:2019,rating:8.3,desc:"In medieval Korea, a crown prince investigates a plague that turns the dead into flesh-eating monsters while political enemies close in."},
+  {id:209,title:"Samurai Champloo",genre:"Comedy",tags:["Thriller", "Action", "Comedy"],emoji:"\ud83d\ude04",year:2004,rating:8.5,desc:"Three mismatched travellers \u2014 two swordsmen and a girl \u2014 journey through Edo-period Japan in this stylishly anachronistic anime."},
+  {id:210,title:"The Residence",genre:"Comedy",tags:["Crime", "Mystery", "Comedy"],emoji:"\ud83d\ude04",year:2025,rating:7.7,desc:"A detective investigates a murder in the White House, interviewing over 150 eccentric staff members in this quirky whodunnit."},
+  {id:211,title:"Bloodline",genre:"Thriller",tags:["Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2015,rating:7.8,desc:"The respected Rayburn family on a Florida Key is torn apart when their black sheep brother returns home with dark secrets in tow."},
+  {id:212,title:"Parasyte: The Maxim",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Horror"],emoji:"\ud83d\ude80",year:2014,rating:8.2,desc:"Alien parasites invade Earth by taking over human brains \u2014 except one that only gets as far as a teenager's right hand."},
+  {id:213,title:"Sword Art Online",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Fantasy"],emoji:"\ud83d\ude80",year:2012,rating:7.5,desc:"Players trapped in a virtual reality MMORPG must clear all 100 floors to escape \u2014 or die in the game and die in real life."},
+  {id:214,title:"Our Planet",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2019,rating:9.2,desc:"David Attenborough narrates breathtaking footage of the planet's most extraordinary wildlife and the habitats under threat."},
+  {id:215,title:"Dirk Gently's Holistic Detective Agency",genre:"Sci-Fi",tags:["Mystery", "Sci-Fi", "Fantasy"],emoji:"\ud83d\ude80",year:2016,rating:8.1,desc:"An eccentric holistic detective and an unwilling assistant follow seemingly unconnected clues that always turn out to be deeply connected."},
+  {id:216,title:"The Terror",genre:"Thriller",tags:["Thriller", "Horror", "Adventure"],emoji:"\ud83d\udd0d",year:2018,rating:7.8,desc:"The crew of a British Arctic expedition become trapped in the ice and hunted by a mysterious, terrifying creature from Inuit mythology."},
+  {id:217,title:"Grace and Frankie",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2015,rating:8.2,desc:"Two women whose husbands leave them for each other are forced to become unlikely housemates and end up forming an unlikely friendship."},
+  {id:218,title:"The Middle",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2009,rating:7.7,desc:"A middle-class Indiana family fumbles through life with humour, warmth, and an endearingly messy lack of success."},
+  {id:219,title:"Spaced",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:1999,rating:8.5,desc:"Two twenty-somethings pretend to be a couple to rent a flat in London in this cult British comedy packed with pop culture references."},
+  {id:220,title:"Formula 1: Drive to Survive",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2019,rating:8.5,desc:"Behind-the-scenes access to the Formula 1 season, following drivers, team principals, and the high-stakes drama of the paddock."},
+  {id:221,title:"Power",genre:"Drama",tags:["Crime"],emoji:"\ud83c\udfad",year:2014,rating:8.1,desc:"A New York nightclub owner lives a double life as a major drug dealer while trying to go legitimate without losing everything."},
+  {id:222,title:"Workaholics",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2011,rating:8.1,desc:"Three college friends who never graduated share a house and work at the same telemarketing company, spending most of their time avoiding work."},
+  {id:223,title:"The Promised Neverland",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2019,rating:8.1,desc:"Orphan children living in an idyllic home discover a horrifying truth about their existence and begin planning a desperate escape."},
+  {id:224,title:"Dexter's Laboratory",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Comedy"],emoji:"\ud83d\ude80",year:1996,rating:7.8,desc:"A boy genius with a secret laboratory hidden behind his bedroom bookcase is constantly thwarted by his clueless but enthusiastic sister."},
+  {id:225,title:"JoJo's Bizarre Adventure",genre:"Fantasy",tags:["Fantasy", "Horror", "Action"],emoji:"\u2694\ufe0f",year:2012,rating:8.6,desc:"The multigenerational saga of the Joestar family and their battles against supernatural enemies using bizarre powers called Stands."},
+  {id:226,title:"Castle Rock",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2018,rating:7.5,desc:"A psychological horror anthology set in the Stephen King multiverse, centred on the fictional town of Castle Rock, Maine."},
+  {id:227,title:"Trailer Park Boys",genre:"Comedy",tags:["Crime", "Comedy"],emoji:"\ud83d\ude04",year:2001,rating:8.5,desc:"Three lovable trailer park residents from Nova Scotia repeatedly fail to execute crime schemes while drinking and causing chaos."},
+  {id:228,title:"The Spy",genre:"Thriller",tags:["Thriller", "Historical", "True Story"],emoji:"\ud83d\udd0d",year:2019,rating:7.9,desc:"Based on the true story of Eli Cohen, an Israeli intelligence officer who goes undercover in 1960s Syria and becomes one of the most effective spies in history."},
+  {id:229,title:"Hunters",genre:"Thriller",tags:["Crime", "Mystery", "WWII"],emoji:"\ud83d\udd2d",year:2020,rating:7.2,desc:"A group of Nazi hunters in 1977 New York City discover that hundreds of escaped Nazi officers are living in America and planning a Fourth Reich."},
+  {id:230,title:"MythBusters",genre:"Drama",tags:["Mystery"],emoji:"\ud83c\udfad",year:2003,rating:8.3,desc:"Two special effects experts test popular myths, urban legends, and movie tropes using science, engineering, and spectacular experiments."},
+  {id:231,title:"Pok\u00e9mon",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Action"],emoji:"\ud83d\ude80",year:1997,rating:7.6,desc:"Young trainer Ash Ketchum and his Pikachu travel the world battling, capturing, and befriending creatures called Pok\u00e9mon to become the very best."},
+  {id:232,title:"New Amsterdam",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2018,rating:7.9,desc:"The idealistic new medical director of America's oldest public hospital tears up the rulebook to actually help his patients."},
+  {id:233,title:"Stargate Universe",genre:"Sci-Fi",tags:["Sci-Fi"],emoji:"\ud83d\ude80",year:2009,rating:7.6,desc:"A group of civilians and military personnel are stranded on an ancient unmanned spacecraft travelling to the far reaches of the universe."},
+  {id:234,title:"The Serpent",genre:"Thriller",tags:["Crime", "Thriller"],emoji:"\ud83d\udd0d",year:2021,rating:7.6,desc:"The true story of Charles Sobhraj, the French serial killer who preyed on backpackers along the hippie trail through Asia in the 1970s."},
+  {id:235,title:"The Amazing World of Gumball",genre:"Sci-Fi",tags:["Sci-Fi", "Fantasy", "Comedy"],emoji:"\ud83d\ude80",year:2011,rating:8.4,desc:"A blue cat and his best friend \u2014 a goldfish who has evolved legs \u2014 attend middle school in the surreal town of Elmore."},
+  {id:236,title:"GLOW",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2017,rating:8.0,desc:"A struggling actress gets a surprising break when she's cast in a women's wrestling show called the Gorgeous Ladies of Wrestling in 1980s LA."},
+  {id:237,title:"The League",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2009,rating:8.2,desc:"A group of friends in a fantasy football league spend more energy sabotaging each other than actually playing football."},
+  {id:238,title:"Haikyuu!!",genre:"Comedy",tags:["Comedy", "Animated"],emoji:"\ud83d\ude04",year:2014,rating:8.7,desc:"A short volleyball player with exceptional jumping ability joins his high school team and works toward competing at the national level."},
+  {id:239,title:"Blue Bloods",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2010,rating:7.7,desc:"Three generations of the Reagan family serve the New York City police department, navigating justice and family dinners every week."},
+  {id:240,title:"Boston Legal",genre:"Comedy",tags:["Crime", "Comedy"],emoji:"\ud83d\ude04",year:2004,rating:8.5,desc:"The outrageous attorneys of the Boston law firm Crane, Poole & Schmidt take on bizarre cases and each other in this legal comedy."},
+  {id:241,title:"Dollhouse",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2009,rating:7.7,desc:"A secret organisation wipes the memories of operatives and programs them with whatever skills a client needs \u2014 until they start to remember."},
+  {id:242,title:"12 Monkeys",genre:"Sci-Fi",tags:["Thriller", "Mystery", "Sci-Fi"],emoji:"\ud83d\ude80",year:2015,rating:7.7,desc:"A time traveller jumps between the present and past to stop a deadly plague from wiping out most of humanity."},
+  {id:243,title:"All the Light We Cannot See",genre:"Drama",tags:["Historical", "War"],emoji:"\ud83c\udfad",year:2023,rating:7.5,desc:"A blind French girl and a German soldier's lives intersect during WWII, connected by a legendary diamond and a radio frequency."},
+  {id:244,title:"Chicago P.D.",genre:"Thriller",tags:["Crime", "Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2014,rating:8.1,desc:"The Intelligence Unit of the Chicago Police Department tackles the city's most dangerous and elaborate crimes using whatever it takes."},
+  {id:245,title:"The Affair",genre:"Drama",tags:["Drama"],emoji:"\ud83c\udfad",year:2014,rating:7.9,desc:"A chance encounter between a troubled New York novelist and a young waitress begins an affair with consequences that ripple for years."},
+  {id:246,title:"Young Royals",genre:"Drama",tags:["Romance"],emoji:"\ud83c\udfad",year:2021,rating:8.2,desc:"A Swedish prince sent to an elite boarding school falls for a classmate, forcing him to choose between royal duty and his own heart."},
+  {id:247,title:"Your Lie in April",genre:"Comedy",tags:["Comedy", "Animated", "Romance"],emoji:"\ud83d\ude04",year:2014,rating:8.6,desc:"A piano prodigy who lost the ability to hear himself play is brought back to music by a free-spirited violinist with a secret."},
+  {id:248,title:"Mr Inbetween",genre:"Comedy",tags:["Crime", "Comedy"],emoji:"\ud83d\ude04",year:2018,rating:8.7,desc:"An Australian hitman tries to balance his professional life \u2014 killing people \u2014 with being a decent father, brother, and boyfriend."},
+  {id:249,title:"Timeless",genre:"Sci-Fi",tags:["Sci-Fi", "Action", "Adventure"],emoji:"\ud83d\ude80",year:2016,rating:7.6,desc:"A historian, a soldier, and a scientist chase a criminal through history to stop him from changing the past for his own mysterious agenda."},
+  {id:250,title:"Coupling",genre:"Comedy",tags:["Comedy", "Romance"],emoji:"\ud83d\ude04",year:2000,rating:8.5,desc:"Six London friends navigate relationships, miscommunication, and attraction in this British comedy often compared to Friends."},
+  {id:251,title:"Nathan for You",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:2013,rating:8.9,desc:"Comedian Nathan Fielder offers failing small businesses genuinely bizarre and extreme marketing strategies in this deadpan reality show."},
+  {id:252,title:"Black Clover",genre:"Sci-Fi",tags:["Thriller", "Sci-Fi", "Fantasy"],emoji:"\ud83d\ude80",year:2017,rating:8.2,desc:""},
+  {id:253,title:"Messiah",genre:"Thriller",tags:["Thriller", "Mystery"],emoji:"\ud83d\udd0d",year:2020,rating:7.6,desc:""},
+  {id:254,title:"Snowfall",genre:"Drama",tags:["Crime"],emoji:"\ud83c\udfad",year:2017,rating:8.5,desc:""},
+  {id:255,title:"Whose Line Is It Anyway?",genre:"Comedy",tags:["Comedy"],emoji:"\ud83d\ude04",year:1998,rating:8.5,desc:""},
+];
+
+
+const ALL_GENRES=[...new Set(SHOWS.map(s=>s.genre))].sort();
+const SESSION_SIZE=20;
+
+let S={myName:'',myRole:'',roomId:'',roomCode:'',p1Name:'',p2Name:'',
+  mySwipes:{},partnerSwipes:{},matches:[],watchedShows:[],
+  deck:[],sessionDeck:[],sessionIndex:0,roundNum:1,
+  selectedGenre:'All',roundMyHearts:[],roundPartnerHearts:[]};
+let rtCh=null,selSug=null;
+
+// SCORING
+function score(show){
+  if(!S.watchedShows.length)return null;
+  const g={},t={};
+  S.watchedShows.forEach(w=>{g[w.genre]=(g[w.genre]||0)+1;w.tags.forEach(x=>t[x]=(t[x]||0)+1)});
+  const n=S.watchedShows.length;
+  let s=0;
+  if(g[show.genre])s+=(g[show.genre]/n)*50;
+  show.tags.forEach(x=>{if(t[x])s+=(t[x]/n)*20});
+  return Math.min(Math.round(s),99);
+}
+function sClass(s){return s>=65?'sh-c':s>=40?'sm-c':'sl-c'}
+function sLabel(s){return s>=65?'🔥 Great match':s>=40?'👍 Good match':'🤷 Might differ'}
+
+// SUPABASE
+function genCode(){const w=['FILM','REEL','COUCH','BINGE','CHILL','PICK','SHOW','WATCH'];return w[Math.floor(Math.random()*w.length)]+(Math.floor(Math.random()*90)+10)}
+async function createRoom(){
+  const n=document.getElementById('myname').value.trim();
+  if(!n){toast('Enter your name!');return}
+  const code=genCode();S.myName=n;S.myRole='p1';S.p1Name=n;
+  const{data,error}=await sb.from('rooms').insert({code,p1_name:n,p1_online:true,started:false}).select().single();
+  if(error){toast('Error: '+error.message);return}
+  S.roomId=data.id;S.roomCode=code;
+  document.getElementById('rch').textContent=code;document.getElementById('lcode').textContent=code;
+  showView('lobby');renderLobby();subRoom();
+}
+async function joinRoom(){
+  const code=document.getElementById('jcode').value.trim().toUpperCase();
+  const n=document.getElementById('jname').value.trim();
+  if(!code){toast('Enter a room code!');return}if(!n){toast('Enter your name!');return}
+  const{data:r,error}=await sb.from('rooms').select().eq('code',code).single();
+  if(error||!r){toast('Room not found!');return}
+  S.myName=n;S.myRole='p2';S.p2Name=n;S.p1Name=r.p1_name;S.roomId=r.id;S.roomCode=code;
+  await sb.from('rooms').update({p2_name:n,p2_online:true}).eq('id',r.id);
+  document.getElementById('rch').textContent=code;showNav();subRoom();
+  if(r.started){await loadSwipes();initDeck();showView('swipe');renderSwipe();}
+  else{showView('lobby');renderLobby();}
+}
+function subRoom(){
+  if(rtCh)sb.removeChannel(rtCh);
+  rtCh=sb.channel('r-'+S.roomId)
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'rooms',filter:`id=eq.${S.roomId}`},async p=>{
+      const r=p.new;S.p1Name=r.p1_name||S.p1Name;S.p2Name=r.p2_name||S.p2Name;
+      if(document.getElementById('view-lobby').classList.contains('active')){
+        renderLobby();
+        if(S.myRole==='p1'&&r.p2_name){document.getElementById('lwait').style.display='none';document.getElementById('startbtn').style.display='block';}
+        if(r.started&&S.myRole==='p2'){await loadSwipes();initDeck();showNav();showView('swipe');renderSwipe();}
+      }
+      if(r.started&&!S.gameStarted){S.gameStarted=true;showNav();}
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'swipes',filter:`room_id=eq.${S.roomId}`},p=>{
+      const sw=p.new,isMe=(S.myRole==='p1'&&sw.player==='p1')||(S.myRole==='p2'&&sw.player==='p2');
+      if(!isMe&&sw.action!=='skip'){
+        S.partnerSwipes[sw.show_id]=sw.action;
+        if(sw.action==='heart')S.roundPartnerHearts.push(sw.show_id);
+        checkMatch(sw.show_id);flashLiv('partner');
+      }
+    }).subscribe();
+}
+async function startGame(){
+  await sb.from('rooms').update({started:true}).eq('id',S.roomId);
+  S.gameStarted=true;showNav();initDeck();showView('swipe');renderSwipe();
+}
+async function loadSwipes(){
+  const{data}=await sb.from('swipes').select().eq('room_id',S.roomId);
+  if(!data)return;
+  data.forEach(sw=>{
+    if(sw.player===S.myRole)S.mySwipes[sw.show_id]=sw.action;
+    else S.partnerSwipes[sw.show_id]=sw.action;
+  });
+  Object.keys(S.mySwipes).forEach(id=>{
+    if(S.mySwipes[id]==='heart'&&S.partnerSwipes[id]==='heart'){
+      const sh=SHOWS.find(s=>s.id===parseInt(id));
+      if(sh&&!S.matches.find(m=>m.id===sh.id))S.matches.push(sh);
+    }
+  });
+}
+async function doSwipe(action){
+  const cards=getSession();
+  if(!cards.length)return;
+  const topEl=document.querySelector('.sc.top');
+  if(!topEl)return;
+  const sid=parseInt(topEl.dataset.id),sh=SHOWS.find(s=>s.id===sid);
+  S.mySwipes[sid]=action;
+  if(action==='heart')S.roundMyHearts.push(sid);
+  if(action!=='skip'){
+    await sb.from('swipes').upsert({room_id:S.roomId,player:S.myRole,show_id:sid,action},{onConflict:'room_id,player,show_id'});
+    if(action==='heart')checkMatch(sid);
+  }else{S.deck=S.deck.filter(s=>s.id!==sid);S.deck.push(sh);}
+  flashLiv('me');
+  S.sessionIndex++;
+  animOut(topEl,action==='nope'?'l':action==='skip'?'u':'r',()=>{
+    const remaining=getSession().length;
+    if(remaining===0&&S.sessionIndex>=SESSION_SIZE){endRound();}
+    else renderSwipe();
+  });
+}
+function checkMatch(sid){
+  const id=parseInt(sid);
+  if(S.mySwipes[id]==='heart'&&S.partnerSwipes[id]==='heart'){
+    const sh=SHOWS.find(s=>s.id===id);
+    if(sh&&!S.matches.find(m=>m.id===sh.id)){S.matches.push(sh);updBadge();showMatchMod(sh);}
+  }
+}
+
+// DECK & SESSION
+function initDeck(){S.deck=[...SHOWS].sort(()=>Math.random()-.5);S.sessionIndex=0;newSession();}
+function newSession(){
+  const unseen=S.deck.filter(s=>!S.mySwipes[s.id]&&(S.selectedGenre==='All'||s.genre===S.selectedGenre));
+  S.sessionDeck=unseen.slice(0,SESSION_SIZE);
+  S.sessionIndex=0;S.roundMyHearts=[];S.roundPartnerHearts=[];
+}
+function nextRound(){S.roundNum++;newSession();showView('swipe');renderSwipe();}
+function getSession(){return S.sessionDeck.filter(s=>!S.mySwipes[s.id]);}
+
+function endRound(){
+  const myH=S.roundMyHearts.map(id=>SHOWS.find(s=>s.id===id)).filter(Boolean);
+  const pH=S.roundPartnerHearts.map(id=>SHOWS.find(s=>s.id===id)).filter(Boolean);
+  const both=myH.filter(s=>pH.find(p=>p.id===s.id));
+  const onlyMe=myH.filter(s=>!pH.find(p=>p.id===s.id));
+  const onlyP=pH.filter(s=>!myH.find(m=>m.id===s.id));
+  document.getElementById('eor-sub').textContent=`Round ${S.roundNum} · ${S.p1Name} & ${S.p2Name}`;
+  document.getElementById('eor-only-me-title').textContent=`💛 Only ${S.myName} hearted`;
+  document.getElementById('eor-only-partner-title').textContent=`💙 Only ${S.myRole==='p1'?S.p2Name:S.p1Name} hearted`;
+  const mkCards=arr=>arr.length?arr.map(s=>`<div class="eor-card"><div class="eor-emoji">${s.emoji}</div><div class="eor-name">${s.title}</div><div class="eor-genre">${s.genre} · ${s.year}</div></div>`).join(''):`<div class="eor-empty">None this round</div>`;
+  document.getElementById('eor-both').innerHTML=mkCards(both);
+  document.getElementById('eor-me').innerHTML=mkCards(onlyMe);
+  document.getElementById('eor-partner').innerHTML=mkCards(onlyP);
+  showView('eor');
+}
+
+// RENDER SWIPE
+function renderGenreBar(){
+  const bar=document.getElementById('gbar');
+  bar.innerHTML=['All',...ALL_GENRES].map(g=>`<div class="gc ${S.selectedGenre===g?'active':''}" onclick="selGenre('${g}')">${g}</div>`).join('');
+}
+function selGenre(g){S.selectedGenre=g;newSession();renderSwipe();}
+
+function renderSwipe(){
+  renderGenreBar();
+  const stack=document.getElementById('cs'),wo=document.getElementById('wo');
+  stack.innerHTML='';stack.appendChild(wo);wo.style.display='none';
+  document.getElementById('lp1').textContent=S.p1Name||'P1';
+  document.getElementById('lp2').textContent=S.p2Name||'P2';
+  document.getElementById('ln1').textContent=S.p1Name||'P1';
+  document.getElementById('ln2').textContent=S.p2Name||'P2';
+  const cards=getSession();
+  const done=SESSION_SIZE-cards.length;
+  const pct=(done/SESSION_SIZE)*100;
+  document.getElementById('spfill').style.width=pct+'%';
+  document.getElementById('sptext').textContent=`Round ${S.roundNum} · ${done}/${SESSION_SIZE} swiped`;
+  const total=S.deck.filter(s=>!S.mySwipes[s.id]).length;
+  document.getElementById('pt').textContent=`${total} shows left in your list`;
+  if(!cards.length){wo.style.display='flex';document.getElementById('wt').textContent=S.selectedGenre==='All'?`Round ${S.roundNum} done! See results 🎉`:`No more ${S.selectedGenre} shows this round`;return;}
+  for(let i=Math.min(2,cards.length-1);i>=0;i--)stack.appendChild(buildCard(cards[i],i));
+}
+
+function buildCard(sh,pos){
+  const d=document.createElement('div');
+  d.className='sc '+(pos===0?'top':pos===1?'b1':'b2');d.dataset.id=sh.id;
+  const sc=score(sh),hasSc=sc!==null;
+  const scBadge=hasSc?`<div class="csb ${sClass(sc)}"><span>${sc}%</span></div>`:'';
+  const tags=sh.tags.map(t=>`<span class="tag">${t}</span>`).join('');
+  const bgs={Drama:'#1a1a2e,#16213e',Comedy:'#1a2a1a,#162616','Sci-Fi':'#0d1b2a,#1b2838',Fantasy:'#1a1030,#241040',Thriller:'#2a0d0d,#1a1010'};
+  const bg=bgs[sh.genre]||'#1e2a3a,#161d27';
+  d.innerHTML=`<div class="ceb" style="background:linear-gradient(135deg,${bg})"><span>${sh.emoji}</span></div>
+<div class="cg"></div>${scBadge}
+<div class="sy">♥ YES</div><div class="sn2">✕ NOPE</div>
+<div class="cb">
+  <div class="cgl">${sh.genre}</div>
+  <div class="ct">${sh.title}</div>
+  <div class="cm">${sh.year} · ⭐${sh.rating}${hasSc?' · '+sLabel(sc):''}</div>
+  <div class="cd">${sh.desc||''}</div>
+  <div class="ctags">${tags}</div>
+</div>`;
+  if(pos===0)addDrag(d,sh);return d;
+}
+
+function addDrag(card){
+  let sx=0,sy=0,dr=false;
+  const s=e=>{dr=true;const t=e.touches?.[0]||e;sx=t.clientX;sy=t.clientY;card.style.transition='none'};
+  const m=e=>{if(!dr)return;const t=e.touches?.[0]||e,dx=t.clientX-sx,dy=t.clientY-sy;
+    card.style.transform=`translate(${dx}px,${dy}px) rotate(${dx*.07}deg)`;
+    card.querySelector('.sy').style.opacity=dx>40?Math.min((dx-40)/65,1):0;
+    card.querySelector('.sn2').style.opacity=dx<-40?Math.min((-dx-40)/65,1):0;e.preventDefault?.()};
+  const e2=e=>{if(!dr)return;dr=false;card.style.transition='';
+    const t=e.changedTouches?.[0]||e,dx=t.clientX-sx;
+    if(dx>80)doSwipe('heart');else if(dx<-80)doSwipe('nope');else card.style.transform=''};
+  card.addEventListener('mousedown',s);window.addEventListener('mousemove',m);window.addEventListener('mouseup',e2);
+  card.addEventListener('touchstart',s,{passive:false});card.addEventListener('touchmove',m,{passive:false});card.addEventListener('touchend',e2);
+}
+
+function animOut(card,dir,cb){
+  if(dir==='l')card.classList.add('xl');
+  else if(dir==='r')card.classList.add('xr');
+  else{card.style.transition='transform .28s,opacity .28s';card.style.transform+=' translateY(-55px)';card.style.opacity='0';}
+  setTimeout(cb,340);
+}
+function flashLiv(who){
+  const el=who==='me'?(S.myRole==='p1'?document.getElementById('lv1'):document.getElementById('lv2')):(S.myRole==='p1'?document.getElementById('lv2'):document.getElementById('lv1'));
+  el.classList.remove('dim');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.add('dim'),2500);
+}
+
+// LOBBY
+function renderLobby(){
+  document.getElementById('lslots').innerHTML=`
+    <div class="pslot"><div class="dot" style="background:var(--red)"></div><div class="pn">${S.p1Name}</div><div class="sok">✓ In room</div></div>
+    <div class="pslot"><div class="dot" style="background:var(--blue)"></div><div class="pn">${S.p2Name||'Waiting…'}</div><div class="${S.p2Name?'sok':'swt'}">${S.p2Name?'✓ Joined':'Not joined yet'}</div></div>`;
+}
+
+// MATCHES
+function renderMatches(){
+  const c=document.getElementById('mc');
+  if(!S.matches.length){c.innerHTML='<div class="es"><div class="ei">💔</div><p>No matches yet — keep swiping!</p></div>';return;}
+  c.innerHTML=`<div class="mg">${S.matches.map(s=>`<div class="mc"><div class="me">${s.emoji}</div><div class="mi"><div class="mt2">${s.title}</div><div class="mm">${s.genre} · ${s.year}</div><div class="mbadge">❤️ Match</div></div></div>`).join('')}</div>`;
+}
+function updBadge(){document.getElementById('mbadge').textContent=S.matches.length?`(${S.matches.length})`:''}
+function showMatchMod(sh){
+  document.getElementById('mnames').textContent=`${S.p1Name} & ${S.p2Name} both want to watch…`;
+  document.getElementById('mshow').textContent=sh.emoji+' '+sh.title;
+  document.getElementById('mmod').classList.add('show');
+}
+function closeMod(){document.getElementById('mmod').classList.remove('show')}
+
+// WATCHED + RECS
+function filterS(){
+  const q=document.getElementById('ws').value.toLowerCase().trim(),box=document.getElementById('sug');
+  if(!q){box.style.display='none';return}
+  const r=SHOWS.filter(s=>s.title.toLowerCase().includes(q)&&!S.watchedShows.find(w=>w.id===s.id)).slice(0,8);
+  if(!r.length){box.style.display='none';return}
+  box.style.display='block';box.innerHTML=r.map((s,i)=>`<div class="si" onclick="pickS(${i})">${s.emoji} ${s.title} <span style="color:var(--dim);font-size:.68rem">${s.genre}</span></div>`).join('');
+  window._ss=r;
+}
+function pickS(i){selSug=window._ss[i];document.getElementById('ws').value=selSug.title;document.getElementById('sug').style.display='none'}
+function addW(){
+  if(!selSug)return;if(S.watchedShows.find(w=>w.id===selSug.id))return;
+  S.watchedShows.push(selSug);selSug=null;document.getElementById('ws').value='';
+  renderWL();renderRecs();renderSwipe();
+}
+function removeW(id){S.watchedShows=S.watchedShows.filter(w=>w.id!==id);renderWL();renderRecs();renderSwipe()}
+function renderWL(){
+  document.getElementById('wl').innerHTML=S.watchedShows.map(s=>`<div class="wi"><div class="we">${s.emoji}</div><div class="wif"><div class="wt">${s.title}</div><div class="wg">${s.genre}</div></div><button class="rb" onclick="removeW(${s.id})">✕</button></div>`).join('');
+}
+function renderRecs(){
+  const r=document.getElementById('rl');
+  if(!S.watchedShows.length){r.innerHTML='<div class="es"><div class="ei">🔮</div><p>Add watched shows to unlock picks</p></div>';return}
+  const sc=SHOWS.filter(s=>!S.watchedShows.find(w=>w.id===s.id)).map(s=>({...s,sc:score(s)})).sort((a,b)=>b.sc-a.sc).slice(0,10);
+  r.innerHTML=sc.map(s=>`<div class="ri"><div class="re">${s.emoji}</div><div class="rif"><div class="rt">${s.title}</div><div class="rg">${s.genre} · ${s.year}</div></div><div class="rsc"><div class="rp">${s.sc}%</div><div class="rsbar"><div class="rsf" style="width:${s.sc}%"></div></div></div></div>`).join('');
+}
+
+// NAV
+function showNav(){document.getElementById('rp').style.display='block';document.querySelectorAll('.tb').forEach(b=>b.style.display='block')}
+function showView(n){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById('view-'+n).classList.add('active')}
+function switchTab(n){
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+n)?.classList.add('active');
+  if(n==='matches'){renderMatches();showView('matches');}else showView('swipe');
+}
+function copyCode(){navigator.clipboard?.writeText(S.roomCode).then(()=>toast('Copied! 📋'))}
+let _tt;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('show'),2800)}
+
+// BOOT
+(async()=>{
+  const fill=document.getElementById('lf'),msg=document.getElementById('lm');
+  const steps=[[25,'Loading 250 shows from your IMDb watchlists…'],[55,'Building recommendation engine…'],[80,'Connecting multiplayer…'],[100,'Ready!']];
+  for(const[p,t]of steps){fill.style.width=p+'%';msg.textContent=t;await new Promise(r=>setTimeout(r,380))}
+  await new Promise(r=>setTimeout(r,220));
+  const ls=document.getElementById('ls');ls.style.transition='opacity .4s';ls.style.opacity='0';
+  setTimeout(()=>ls.style.display='none',400);
+})();
+</script>
+</body>
+</html>
